@@ -23,7 +23,7 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles --project HafaUp.xcodeproj
+          xcode-project use-profiles
       - name: Archive iOS
         script: |
           set -o pipefail
@@ -35,14 +35,27 @@ workflows:
             archive \
             COMPILER_INDEX_STORE_ENABLE=NO \
             DEVELOPMENT_TEAM=GCFCJUMRPV \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            CODE_SIGN_STYLE=Manual \
-            SUPPORTS_MACCATALYST=NO
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates
       - name: Export IPA
         script: |
-          xcode-project build-ipa \
-            --workspace "HafaUp.xcworkspace" \
-            --scheme "HafaUp"
+          cat > /tmp/export.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>GCFCJUMRPV</string>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$CM_BUILD_DIR/build/ios/xcarchive/HafaUp.xcarchive" \
+            -exportPath "$CM_BUILD_DIR/build/ios/ipa" \
+            -exportOptionsPlist /tmp/export.plist \
+            -allowProvisioningUpdates
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
