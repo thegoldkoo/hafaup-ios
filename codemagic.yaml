@@ -2,15 +2,22 @@ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 60
+
     integrations:
       app_store_connect: Codemagic
+
     environment:
       xcode: latest
       cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.app.captainguam
+
     scripts:
       - name: Install CocoaPods
         script: |
-          pod install || true
+          pod install
+
       - name: Setup signing
         script: |
           keychain initialize
@@ -18,28 +25,17 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles
-      - name: Archive iOS
-        script: |
-          set -o pipefail
-          xcodebuild \
-            -workspace HafaUp.xcworkspace \
-            -scheme HafaUp \
-            -destination 'generic/platform=iOS' \
-            -archivePath "$CM_BUILD_DIR/build/ios/xcarchive/HafaUp.xcarchive" \
-            archive \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            DEVELOPMENT_TEAM=GCFCJUMRPV \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            CODE_SIGN_STYLE=Manual \
-            SUPPORTS_MACCATALYST=NO
-      - name: Export IPA
+          xcode-project use-profiles --project HafaUp.xcodeproj
+
+      - name: Build IPA
         script: |
           xcode-project build-ipa \
             --workspace "HafaUp.xcworkspace" \
             --scheme "HafaUp"
+
     artifacts:
       - build/ios/ipa/*.ipa
+
     publishing:
       app_store_connect:
         auth: integration
