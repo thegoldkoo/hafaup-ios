@@ -25,7 +25,6 @@ class SubscribeMessage {
 }
 
 func handleSubscribeTouch(message: WKScriptMessage) {
-  // [START subscribe_topic]
     let subscribeMessages = parseSubscribeMessage(message: message)
     if (subscribeMessages.count > 0){
         let _message = subscribeMessages[0]
@@ -36,15 +35,11 @@ func handleSubscribeTouch(message: WKScriptMessage) {
             Messaging.messaging().subscribe(toTopic: _message.topic) { error in }
         }
     }
-    
-
-  // [END subscribe_topic]
 }
 
 func parseSubscribeMessage(message: WKScriptMessage) -> [SubscribeMessage] {
     var subscribeMessages = [SubscribeMessage]()
     if let objStr = message.body as? String {
-
         let data: Data = objStr.data(using: .utf8)!
         do {
             let jsObj = try JSONSerialization.jsonObject(with: data, options: .init(rawValue: 0))
@@ -67,16 +62,16 @@ func parseSubscribeMessage(message: WKScriptMessage) -> [SubscribeMessage] {
 func returnPermissionResult(isGranted: Bool){
     DispatchQueue.main.async(execute: {
         if (isGranted){
-            괌장터.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-request', { detail: 'granted' }))")
+            HafaUp.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-request', { detail: 'granted' }))")
         }
         else {
-            괌장터.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-request', { detail: 'denied' }))")
+            HafaUp.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-request', { detail: 'denied' }))")
         }
     })
 }
 func returnPermissionState(state: String){
     DispatchQueue.main.async(execute: {
-        괌장터.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-state', { detail: '\(state)' }))")
+        HafaUp.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('push-permission-state', { detail: '\(state)' }))")
     })
 }
 
@@ -134,9 +129,9 @@ func handlePushState() {
 }
 
 func checkViewAndEvaluate(event: String, detail: String) {
-    if (!괌장터.webView.isHidden && !괌장터.webView.isLoading ) {
+    if (!HafaUp.webView.isHidden && !HafaUp.webView.isLoading ) {
         DispatchQueue.main.async(execute: {
-            괌장터.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('\(event)', { detail: \(detail) }))")
+            HafaUp.webView.evaluateJavaScript("this.dispatchEvent(new CustomEvent('\(event)', { detail: \(detail) }))")
         })
     }
     else {
