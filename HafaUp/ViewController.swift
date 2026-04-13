@@ -48,32 +48,32 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        괌장터.webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: nil)
+        HafaUp.webView.frame = calcWebviewFrame(webviewView: webviewView, toolbarView: nil)
     }
     
     @objc func keyboardWillHide(_ notification: NSNotification) {
-        괌장터.webView.setNeedsLayout()
+        HafaUp.webView.setNeedsLayout()
     }
     
     func initWebView() {
-        괌장터.webView = createWebView(container: webviewView, WKSMH: self, WKND: self, NSO: self, VC: self)
-        webviewView.addSubview(괌장터.webView);
+        HafaUp.webView = createWebView(container: webviewView, WKSMH: self, WKND: self, NSO: self, VC: self)
+        webviewView.addSubview(HafaUp.webView);
         
-        괌장터.webView.uiDelegate = self;
+        HafaUp.webView.uiDelegate = self;
         
-        괌장터.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
+        HafaUp.webView.addObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress), options: .new, context: nil)
 
         if(pullToRefresh){
             let refreshControl = UIRefreshControl()
             refreshControl.addTarget(self, action: #selector(refreshWebView(_:)), for: UIControl.Event.valueChanged)
-            괌장터.webView.scrollView.addSubview(refreshControl)
-            괌장터.webView.scrollView.bounces = true
+            HafaUp.webView.scrollView.addSubview(refreshControl)
+            HafaUp.webView.scrollView.bounces = true
         }
 
         if #available(iOS 15.0, *), adaptiveUIStyle {
-            themeObservation = 괌장터.webView.observe(\.themeColor) { [unowned self] webView, _ in
-                let backgroundColor = 괌장터.webView.underPageBackgroundColor;
-                let themeColor = 괌장터.webView.themeColor;
+            themeObservation = HafaUp.webView.observe(\.themeColor) { [unowned self] webView, _ in
+                let backgroundColor = HafaUp.webView.underPageBackgroundColor;
+                let themeColor = HafaUp.webView.themeColor;
                 currentWebViewTheme = themeColor?.isLight() ?? backgroundColor?.isLight() ?? true ? .light : .dark
                 self.overrideUIStyle()
                 view.backgroundColor = themeColor ?? backgroundColor;
@@ -82,7 +82,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     }
 
     @objc func refreshWebView(_ sender: UIRefreshControl) {
-        괌장터.webView?.reload()
+        HafaUp.webView?.reload()
         sender.endRefreshing()
     }
 
@@ -100,7 +100,6 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         let toolbarView = UIToolbar(frame: CGRect(x: 0, y: 0, width: webviewView.frame.width, height: 0))
         toolbarView.sizeToFit()
         toolbarView.frame = CGRect(x: 0, y: 0, width: webviewView.frame.width, height: toolbarView.frame.height + statusBarHeight)
-//        toolbarView.autoresizingMask = [.flexibleTopMargin, .flexibleRightMargin, .flexibleWidth]
         
         let flex = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
         let close = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(loadRootUrl))
@@ -113,7 +112,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     
     func overrideUIStyle(toDefault: Bool = false) {
         if #available(iOS 15.0, *), adaptiveUIStyle {
-            if (((htmlIsLoaded && !괌장터.webView.isHidden) || toDefault) && self.currentWebViewTheme != .unspecified) {
+            if (((htmlIsLoaded && !HafaUp.webView.isHidden) || toDefault) && self.currentWebViewTheme != .unspecified) {
                 UIApplication
                     .shared
                     .connectedScenes
@@ -130,7 +129,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     }
     
     @objc func loadRootUrl(cachePolicy: NSURLRequest.CachePolicy = .useProtocolCachePolicy) {
-        괌장터.webView.load(URLRequest(url: SceneDelegate.universalLinkToLaunch ?? SceneDelegate.shortcutLinkToLaunch ?? rootUrl, cachePolicy: cachePolicy))
+        HafaUp.webView.load(URLRequest(url: SceneDelegate.universalLinkToLaunch ?? SceneDelegate.shortcutLinkToLaunch ?? rootUrl, cachePolicy: cachePolicy))
     }
     
     func reloadWebview(
@@ -154,7 +153,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         self.animateConnectionProblem(false)
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            괌장터.webView.isHidden = false
+            HafaUp.webView.isHidden = false
             self.loadingView.isHidden = true
            
             self.setProgress(0.0, false)
@@ -192,10 +191,10 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
 
         if (keyPath == #keyPath(WKWebView.estimatedProgress) &&
-                괌장터.webView.isLoading &&
+                HafaUp.webView.isLoading &&
                 !self.loadingView.isHidden &&
                 !self.htmlIsLoaded) {
-                    var progress = Float(괌장터.webView.estimatedProgress);
+                    var progress = Float(HafaUp.webView.estimatedProgress);
                     
                     if (progress >= 0.8) { progress = 1.0; };
                     if (progress >= 0.3) { self.animateConnectionProblem(false); }
@@ -219,7 +218,7 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         }
         else {
             UIView.animate(withDuration: 0.3, delay: 0, options: [], animations: {
-                self.connectionProblemView.alpha = 0 // Here you will get the animation you want
+                self.connectionProblemView.alpha = 0
             }, completion: { _ in
                 self.connectionProblemView.isHidden = true;
                 self.connectionProblemView.layer.removeAllAnimations();
@@ -228,19 +227,13 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
     }
         
     deinit {
-        괌장터.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
+        HafaUp.webView.removeObserver(self, forKeyPath: #keyPath(WKWebView.estimatedProgress))
     }
 }
 
 extension UIColor {
-    // Check if the color is light or dark, as defined by the injected lightness threshold.
-    // Some people report that 0.7 is best. I suggest to find out for yourself.
-    // A nil value is returned if the lightness couldn't be determined.
     func isLight(threshold: Float = 0.5) -> Bool? {
         let originalCGColor = self.cgColor
-
-        // Now we need to convert it to the RGB colorspace. UIColor.white / UIColor.black are greyscale and not RGB.
-        // If you don't do this then you will crash when accessing components index 2 below when evaluating greyscale colors.
         let RGBCGColor = originalCGColor.converted(to: CGColorSpaceCreateDeviceRGB(), intent: .defaultIntent, options: nil)
         guard let components = RGBCGColor?.components else {
             return nil
@@ -248,7 +241,6 @@ extension UIColor {
         guard components.count >= 3 else {
             return nil
         }
-
         let brightness = Float(((components[0] * 299) + (components[1] * 587) + (components[2] * 114)) / 1000)
         return (brightness > threshold)
     }
@@ -257,7 +249,7 @@ extension UIColor {
 extension ViewController: WKScriptMessageHandler {
   func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         if message.name == "print" {
-            printView(webView: 괌장터.webView)
+            printView(webView: HafaUp.webView)
         }
         if message.name == "push-subscribe" {
             handleSubscribeTouch(message: message)
