@@ -2,22 +2,18 @@ workflows:
   ios-release:
     name: iOS Release
     max_build_duration: 60
-
     integrations:
       app_store_connect: Codemagic
-
     environment:
       xcode: latest
       cocoapods: default
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.app.captainguam
-
     scripts:
       - name: Install CocoaPods
         script: |
           pod install
-
       - name: Setup signing
         script: |
           keychain initialize
@@ -26,8 +22,7 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles --project HafaUp.xcodeproj
-
-      - name: Fix Info.plist and icons
+      - name: Fix plist and generate all icons
         script: |
           /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" HafaUp/Info.plist 2>/dev/null
           /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string AppIcon" HafaUp/Info.plist
@@ -40,31 +35,66 @@ workflows:
           /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon dict" HafaUp/Info.plist
           /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconName string AppIcon" HafaUp/Info.plist
           python3 -m pip install --no-cache-dir Pillow
-          python3 << 'PYEOF'
+          python3 - << 'PYEOF'
           from PIL import Image
-          import os
+          import os, json
           folder = "HafaUp/Assets.xcassets/AppIcon.appiconset"
-          for f in os.listdir(folder):
-              if f.lower().endswith(".png"):
-                  path = os.path.join(folder, f)
-                  img = Image.open(path).convert("RGBA")
-                  bg = Image.new("RGB", img.size, (255, 255, 255))
-                  bg.paste(img, mask=img.getchannel("A"))
-                  bg.save(path, "PNG")
-                  check = Image.open(path)
-                  print(f"Fixed {f}: mode={check.mode}, size={check.size}")
+          preferred = os.path.join(folder, "icon-1024.png")
+          if os.path.exists(preferred):
+              src = preferred
+          else:
+              src = None
+              for f in os.listdir(folder):
+                  if f.lower().endswith(".png"):
+                      src = os.path.join(folder, f)
+                      break
+          if not src:
+              print("ERROR: No source icon found")
+              exit(1)
+          print(f"Using source: {src}")
+          img = Image.open(src).convert("RGBA")
+          sizes = [
+              ("iphone", "20x20", "2x", 40, "iphone-40"),
+              ("iphone", "20x20", "3x", 60, "iphone-60"),
+              ("iphone", "29x29", "2x", 58, "iphone-58"),
+              ("iphone", "29x29", "3x", 87, "iphone-87"),
+              ("iphone", "40x40", "2x", 80, "iphone-80"),
+              ("iphone", "40x40", "3x", 120, "iphone-120"),
+              ("iphone", "60x60", "2x", 120, "iphone-120x2"),
+              ("iphone", "60x60", "3x", 180, "iphone-180"),
+              ("ipad", "20x20", "1x", 20, "ipad-20"),
+              ("ipad", "20x20", "2x", 40, "ipad-40"),
+              ("ipad", "29x29", "1x", 29, "ipad-29"),
+              ("ipad", "29x29", "2x", 58, "ipad-58"),
+              ("ipad", "40x40", "1x", 40, "ipad-40x1"),
+              ("ipad", "40x40", "2x", 80, "ipad-80"),
+              ("ipad", "76x76", "1x", 76, "ipad-76"),
+              ("ipad", "76x76", "2x", 152, "ipad-152"),
+              ("ipad", "83.5x83.5", "2x", 167, "ipad-167"),
+              ("ios-marketing", "1024x1024", "1x", 1024, "marketing-1024"),
+          ]
+          images = []
+          for idiom, size, scale, px, name in sizes:
+              fname = f"{name}.png"
+              r = img.resize((px, px), Image.LANCZOS)
+              bg = Image.new("RGB", (px, px), (255, 255, 255))
+              bg.paste(r, mask=r.getchannel("A"))
+              bg.save(os.path.join(folder, fname), "PNG")
+              images.append({"idiom": idiom, "size": size, "scale": scale, "filename": fname})
+              print(f"Created {fname} ({px}x{px})")
+          contents = {"images": images, "info": {"version": 1, "author": "xcode"}}
+          with open(os.path.join(folder, "Contents.json"), "w") as f:
+              json.dump(contents, f, indent=2)
+          print("Done - all 18 icons generated")
           PYEOF
           cd "$CM_BUILD_DIR"
-
       - name: Build IPA
         script: |
           xcode-project build-ipa \
             --workspace "HafaUp.xcworkspace" \
             --scheme "HafaUp"
-
     artifacts:
       - build/ios/ipa/*.ipa
-
     publishing:
       app_store_connect:
         auth: integration
