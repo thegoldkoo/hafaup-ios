@@ -1,32 +1,71 @@
-- name: Fix Info.plist and icons
-  script: |
-    /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" HafaUp/Info.plist 2>/dev/null
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string AppIcon" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Delete :CFBundleIcons" HafaUp/Info.plist 2>/dev/null
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons dict" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons:CFBundlePrimaryIcon dict" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName string AppIcon" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Delete :CFBundleIcons~ipad" HafaUp/Info.plist 2>/dev/null
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad dict" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon dict" HafaUp/Info.plist
-    /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconName string AppIcon" HafaUp/Info.plist
+workflows:
+  ios-release:
+    name: iOS Release
+    max_build_duration: 60
 
-    python3 -m pip install --no-cache-dir Pillow
+    integrations:
+      app_store_connect: Codemagic
 
-    python3 << 'PYEOF'
-    from PIL import Image
-    import os
+    environment:
+      xcode: latest
+      cocoapods: default
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.app.captainguam
 
-    folder = "HafaUp/Assets.xcassets/AppIcon.appiconset"
-    for f in os.listdir(folder):
-        if f.lower().endswith(".png"):
-            path = os.path.join(folder, f)
-            img = Image.open(path).convert("RGBA")
-            bg = Image.new("RGB", img.size, (255, 255, 255))
-            bg.paste(img, mask=img.getchannel("A"))
-            bg.save(path, "PNG")
-            check = Image.open(path)
-            print(f"Fixed {f}: mode={check.mode}, size={check.size}")
-    PYEOF
+    scripts:
+      - name: Install CocoaPods
+        script: |
+          pod install
 
-    cd "$CM_BUILD_DIR"
+      - name: Setup signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files com.app.captainguam \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project HafaUp.xcodeproj
+
+      - name: Fix Info.plist and icons
+        script: |
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" HafaUp/Info.plist 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string AppIcon" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleIcons" HafaUp/Info.plist 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons dict" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons:CFBundlePrimaryIcon dict" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName string AppIcon" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Delete :CFBundleIcons~ipad" HafaUp/Info.plist 2>/dev/null
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad dict" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon dict" HafaUp/Info.plist
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIcons~ipad:CFBundlePrimaryIcon:CFBundleIconName string AppIcon" HafaUp/Info.plist
+          python3 -m pip install --no-cache-dir Pillow
+          python3 << 'PYEOF'
+          from PIL import Image
+          import os
+          folder = "HafaUp/Assets.xcassets/AppIcon.appiconset"
+          for f in os.listdir(folder):
+              if f.lower().endswith(".png"):
+                  path = os.path.join(folder, f)
+                  img = Image.open(path).convert("RGBA")
+                  bg = Image.new("RGB", img.size, (255, 255, 255))
+                  bg.paste(img, mask=img.getchannel("A"))
+                  bg.save(path, "PNG")
+                  check = Image.open(path)
+                  print(f"Fixed {f}: mode={check.mode}, size={check.size}")
+          PYEOF
+          cd "$CM_BUILD_DIR"
+
+      - name: Build IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace "HafaUp.xcworkspace" \
+            --scheme "HafaUp"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
