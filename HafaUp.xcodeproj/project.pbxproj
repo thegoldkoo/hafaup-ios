@@ -381,10 +381,8 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1;
-				CURRENT_PROJECT_VERSION = 1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.app.captainguam";
 				PRODUCT_NAME = "HafaUp";
-				PROVISIONING_PROFILE_SPECIFIER = "";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -409,7 +407,6 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1;
-				CURRENT_PROJECT_VERSION = 1;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.app.captainguam";
 				PRODUCT_NAME = "HafaUp";
 				SUPPORTS_MACCATALYST = NO;
