@@ -3,7 +3,7 @@ struct Cookie {
     var name: String
     var value: String
 }
-let gcmMessageIDKey = "00000000000"
+let gcmMessageIDKey = "150996161475"
 // URL for first launch
 let rootUrl = URL(string: "https://hafaup.com/app.html")!
 // allowed origin is for what we are sticking to pwa domain
