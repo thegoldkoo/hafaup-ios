@@ -43,6 +43,19 @@
 	<true/>
 	<key>LSApplicationCategoryType</key>
 	<string>public.app-category.productivity</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>kakaotalk</string>
+		<string>kakaolink</string>
+		<string>kakaoplus</string>
+		<string>kakaokompassauth</string>
+		<string>kakaostory</string>
+		<string>storykompassauth</string>
+		<string>itms-apps</string>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>sms</string>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
