@@ -101,6 +101,10 @@
 	<key>WKAppBoundDomains</key>
 	<array>
 		<string>hafaup.com</string>
+		<string>ap-southeast-2m8nfu05hd.auth.ap-southeast-2.amazoncognito.com</string>
+		<string>accounts.google.com</string>
+		<string>kauth.kakao.com</string>
+		<string>appleid.apple.com</string>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
