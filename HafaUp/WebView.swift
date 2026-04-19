@@ -118,6 +118,37 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
         if (navigationAction.shouldPerformDownload || navigationAction.request.url?.scheme == "blob") {
             return decisionHandler(.download)
         }
+        
+        // ✅ 커스텀 스킴 (kakaotalk://, kakaolink://, tel:, mailto: 등) → 네이티브 앱 실행
+        if let requestUrl = navigationAction.request.url {
+            let scheme = requestUrl.scheme?.lowercased() ?? ""
+            let webSchemes = ["http", "https", "about", "file"]
+            if !webSchemes.contains(scheme) && !scheme.isEmpty {
+                print("🔗 커스텀 스킴 감지: \(scheme)")
+                if UIApplication.shared.canOpenURL(requestUrl) {
+                    print("✅ 네이티브 앱 열기: \(requestUrl.absoluteString)")
+                    UIApplication.shared.open(requestUrl, options: [:]) { success in
+                        if !success {
+                            print("❌ 앱 열기 실패: \(requestUrl.absoluteString)")
+                        }
+                    }
+                    decisionHandler(.cancel)
+                    return
+                } else if scheme.hasPrefix("kakao") {
+                    // Kakao 앱 미설치 → App Store 유도
+                    print("⚠️ Kakao 앱 미설치 — App Store 로 이동")
+                    if let appStoreUrl = URL(string: "itms-apps://itunes.apple.com/app/id362057947") {
+                        UIApplication.shared.open(appStoreUrl, options: [:], completionHandler: nil)
+                    }
+                    decisionHandler(.cancel)
+                    return
+                } else {
+                    print("⚠️ 처리 불가 스킴: \(scheme)")
+                    decisionHandler(.cancel)
+                    return
+                }
+            }
+        }
 
         if let requestUrl = navigationAction.request.url{
             if let requestHost = requestUrl.host {
@@ -144,9 +175,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
                 }
                 if (navigationAction.navigationType == .other &&
                     navigationAction.value(forKey: "syntheticClickType") as! Int == 0 &&
-                    (navigationAction.targetFrame != nil) &&
-                    // no error here, fake warning
-                    (navigationAction.sourceFrame != nil)
+                    (navigationAction.targetFrame != nil)
                 ) {
                     decisionHandler(.allow)
                     return
@@ -168,19 +197,8 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
                 }
             } else {
                 decisionHandler(.cancel)
-                if (navigationAction.request.url?.scheme == "tel" || navigationAction.request.url?.scheme == "mailto" ){
-                    if (UIApplication.shared.canOpenURL(requestUrl)) {
-                        UIApplication.shared.open(requestUrl)
-                    }
-                }
-                else {
-                    if requestUrl.isFileURL {
-                        // not tested
-                        downloadAndOpenFile(url: requestUrl.absoluteURL)
-                    }
-                    // if (requestUrl.absoluteString.contains("base64")){
-                    //     downloadAndOpenBase64File(base64String: requestUrl.absoluteString)
-                    // }
+                if requestUrl.isFileURL {
+                    downloadAndOpenFile(url: requestUrl.absoluteURL)
                 }
             }
         }
@@ -202,7 +220,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
             preferredStyle: .alert
         )
 
-        // Add a confirmation action “OK”
+        // Add a confirmation action "OK"
         let okAction = UIAlertAction(
             title: "OK",
             style: .default,
@@ -229,7 +247,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
             preferredStyle: .alert
         )
 
-        // Add a confirmation action “Cancel”
+        // Add a confirmation action "Cancel"
         let cancelAction = UIAlertAction(
             title: "Cancel",
             style: .cancel,
@@ -239,7 +257,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
             }
         )
 
-        // Add a confirmation action “OK”
+        // Add a confirmation action "OK"
         let okAction = UIAlertAction(
             title: "OK",
             style: .default,
@@ -268,7 +286,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
             preferredStyle: .alert
         )
 
-        // Add a confirmation action “Cancel”
+        // Add a confirmation action "Cancel"
         let cancelAction = UIAlertAction(
             title: "Cancel",
             style: .cancel,
@@ -278,7 +296,7 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
             }
         )
 
-        // Add a confirmation action “OK”
+        // Add a confirmation action "OK"
         let okAction = UIAlertAction(
             title: "OK",
             style: .default,
@@ -323,32 +341,6 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
         }
         task.resume()
     }
-
-    // func downloadAndOpenBase64File(base64String: String) {
-    //     // Split the base64 string to extract the data and the file extension
-    //     let components = base64String.components(separatedBy: ";base64,")
-
-    //     // Make sure the base64 string has the correct format
-    //     guard components.count == 2, let format = components.first?.split(separator: "/").last else {
-    //         print("Invalid base64 string format")
-    //         return
-    //     }
-
-    //     // Remove the data type prefix to get the base64 data
-    //     let dataString = components.last!
-
-    //     if let imageData = Data(base64Encoded: dataString) {
-    //         let documentsUrl: URL  =  FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-    //         let destinationFileUrl = documentsUrl.appendingPathComponent("image.\(format)")
-
-    //         do {
-    //             try imageData.write(to: destinationFileUrl)
-    //             self.openFile(url: destinationFileUrl)
-    //         } catch {
-    //             print("Error writing image to file url: \(destinationFileUrl): \(error)")
-    //         }
-    //     }
-    // }
 
     func openFile(url: URL) {
         self.documentController = UIDocumentInteractionController(url: url)
