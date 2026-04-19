@@ -15,9 +15,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         Messaging.messaging().delegate = self
         // [END set_messaging_delegate]
         UNUserNotificationCenter.current().delegate = self
-        // Register for push notifications
-        application.registerForRemoteNotifications()
-        // [END register_for_notifications]
+
+        // ✅ 알림 권한 요청 — 이게 있어야 iOS가 "알림 허용?" 팝업을 띄움
+        UNUserNotificationCenter.current().requestAuthorization(
+            options: [.alert, .badge, .sound]
+        ) { granted, error in
+            print("🔔 알림 권한 요청 결과: granted=\(granted), error=\(String(describing: error))")
+            if granted {
+                DispatchQueue.main.async {
+                    application.registerForRemoteNotifications()
+                }
+            } else {
+                print("⚠️ 사용자가 알림을 거부했습니다. 설정에서 수동으로 켜야 합니다.")
+            }
+        }
+
         return true
     }
 
@@ -41,7 +53,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        print("Unable to register for remote notifications: \(error.localizedDescription)")
+        print("❌ Unable to register for remote notifications: \(error.localizedDescription)")
+    }
+
+    // APNs 토큰 등록 성공 로그 (디버깅용)
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        let tokenStr = deviceToken.map { String(format: "%02x", $0) }.joined()
+        print("📱 APNs 디바이스 토큰 등록 성공: \(tokenStr.prefix(20))...")
     }
 }
 
@@ -73,7 +91,7 @@ extension AppDelegate : UNUserNotificationCenterDelegate {
 
 extension AppDelegate : MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
-        print("Firebase registration token: \(String(describing: fcmToken))")
+        print("🔥 Firebase registration token: \(String(describing: fcmToken))")
         let dataDict:[String: String] = ["token": fcmToken ?? ""]
         NotificationCenter.default.post(name: Notification.Name("FCMToken"), object: nil, userInfo: dataDict)
         handleFCMToken()
