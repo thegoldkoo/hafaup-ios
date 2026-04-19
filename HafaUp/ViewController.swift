@@ -146,6 +146,51 @@ class ViewController: UIViewController, WKNavigationDelegate, UIDocumentInteract
         self.loadingMode = loadingMode
     }
     
+    // ✅ 네이티브 앱 URL 스킴 처리 (kakaotalk://, tel:, mailto: 등)
+    func webView(_ webView: WKWebView,
+                 decidePolicyFor navigationAction: WKNavigationAction,
+                 decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        
+        guard let url = navigationAction.request.url else {
+            decisionHandler(.allow)
+            return
+        }
+        
+        let scheme = url.scheme?.lowercased() ?? ""
+        
+        // http / https / about / file → WebView 가 처리
+        let webSchemes = ["http", "https", "about", "file"]
+        if webSchemes.contains(scheme) {
+            decisionHandler(.allow)
+            return
+        }
+        
+        // 나머지는 네이티브 앱으로 넘김 (kakaotalk://, kakaolink://, tel:, mailto:, sms:, itms-apps: 등)
+        if UIApplication.shared.canOpenURL(url) {
+            print("🔗 네이티브 앱으로 연결: \(scheme)")
+            UIApplication.shared.open(url, options: [:]) { success in
+                if !success {
+                    print("❌ 앱 열기 실패: \(url.absoluteString)")
+                }
+            }
+            decisionHandler(.cancel)
+            return
+        }
+        
+        // 앱이 설치 안 되어 있으면 App Store 로 유도 (Kakao 전용)
+        if scheme.hasPrefix("kakao") {
+            print("⚠️ Kakao 앱 미설치 — App Store 로 이동")
+            if let appStoreUrl = URL(string: "itms-apps://itunes.apple.com/app/id362057947") {
+                UIApplication.shared.open(appStoreUrl, options: [:], completionHandler: nil)
+            }
+            decisionHandler(.cancel)
+            return
+        }
+        
+        print("⚠️ 처리 불가 URL: \(url.absoluteString)")
+        decisionHandler(.cancel)
+    }
+    
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!){
         htmlIsLoaded = true
         
