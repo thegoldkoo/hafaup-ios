@@ -37,6 +37,13 @@ PROFILE_DIRS = [
   '/tmp/build/profiles'
 ].compact
 
+PROFILE_ROOTS = [
+  ENV['CM_BUILD_DIR'],
+  ENV['HOME'],
+  Dir.pwd,
+  '/tmp'
+].compact.uniq
+
 def parse_profile(path)
   # .mobileprovision is a CMS-signed plist. Strip the signature to get the plist XML.
   raw = File.binread(path)
@@ -59,31 +66,41 @@ rescue LoadError
 end
 
 def find_widget_profile
+  profile_paths = []
+
   PROFILE_DIRS.each do |dir|
     next unless dir && Dir.exist?(dir)
-    Dir.glob(File.join(dir, '*.mobileprovision')).each do |path|
-      info = parse_profile(path)
-      next unless info
-      app_id = info.dig('Entitlements', 'application-identifier').to_s
-      app_id = info['application-identifier'].to_s if app_id.empty?
-      # application-identifier is "TEAMID.com.app.captainguam.HafaUpWidget"
-      if app_id.end_with?(".#{WIDGET_BUNDLE}")
-        return { path: path, name: info['Name'], uuid: info['UUID'] }
-      end
+
+    profile_paths.concat(Dir.glob(File.join(dir, '*.mobileprovision')))
+  end
+
+  PROFILE_ROOTS.each do |root|
+    next unless root && Dir.exist?(root)
+
+    profile_paths.concat(Dir.glob(File.join(root, '**', '*.mobileprovision')))
+  end
+
+  profile_paths = profile_paths.uniq
+  puts "[apply-widget-signing] scanned #{profile_paths.length} mobileprovision file(s)"
+
+  profile_paths.each do |path|
+    info = parse_profile(path)
+    next unless info
+
+    app_id = info.dig('Entitlements', 'application-identifier').to_s
+    app_id = info['application-identifier'].to_s if app_id.empty?
+    # application-identifier is "TEAMID.com.app.captainguam.HafaUpWidget"
+    puts "  profile candidate: #{File.basename(path)} app_id=#{app_id} name=#{info['Name']}"
+    if app_id.end_with?(".#{WIDGET_BUNDLE}")
+      return { path: path, name: info['Name'], uuid: info['UUID'] }
     end
   end
+
   nil
 end
 
 puts "[apply-widget-signing] looking for profile matching #{WIDGET_BUNDLE}"
 profile = find_widget_profile
-if profile.nil?
-  warn "[apply-widget-signing] ERROR: no .mobileprovision found for #{WIDGET_BUNDLE}"
-  warn "                              Check the fetch-signing-files step for the widget bundle id."
-  exit 1
-end
-
-puts "[apply-widget-signing] found profile: #{profile[:name]} (UUID #{profile[:uuid]})"
 
 project = Xcodeproj::Project.open(PROJECT_PATH)
 widget = project.targets.find { |t| t.name == WIDGET_NAME }
@@ -92,14 +109,23 @@ if widget.nil?
   exit 0
 end
 
-widget.build_configurations.each do |bc|
-  bc.build_settings['CODE_SIGN_STYLE']                = 'Manual'
-  bc.build_settings['CODE_SIGN_IDENTITY']             = 'Apple Distribution'
-  bc.build_settings['DEVELOPMENT_TEAM']               = TEAM_ID
-  bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile[:name]
-  bc.build_settings['PROVISIONING_PROFILE']           = profile[:uuid]
-  bc.build_settings['PRODUCT_BUNDLE_IDENTIFIER']      = WIDGET_BUNDLE
-  puts "  #{widget.name}/#{bc.name}: profile = #{profile[:name]}"
+if profile.nil?
+  warn "[apply-widget-signing] WARN: no .mobileprovision found for #{WIDGET_BUNDLE}"
+  warn "                             Leaving xcode-project use-profiles settings in place."
+  widget.build_configurations.each do |bc|
+    puts "  #{widget.name}/#{bc.name}: profile_specifier=#{bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'].inspect} profile=#{bc.build_settings['PROVISIONING_PROFILE'].inspect}"
+  end
+else
+  puts "[apply-widget-signing] found profile: #{profile[:name]} (UUID #{profile[:uuid]})"
+  widget.build_configurations.each do |bc|
+    bc.build_settings['CODE_SIGN_STYLE']                = 'Manual'
+    bc.build_settings['CODE_SIGN_IDENTITY']             = 'Apple Distribution'
+    bc.build_settings['DEVELOPMENT_TEAM']               = TEAM_ID
+    bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile[:name]
+    bc.build_settings['PROVISIONING_PROFILE']           = profile[:uuid]
+    bc.build_settings['PRODUCT_BUNDLE_IDENTIFIER']      = WIDGET_BUNDLE
+    puts "  #{widget.name}/#{bc.name}: profile = #{profile[:name]}"
+  end
 end
 
 project.save
