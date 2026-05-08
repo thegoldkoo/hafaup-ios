@@ -37,19 +37,15 @@ public final class ShipmentActivityManager {
         lock.lock(); defer { lock.unlock() }
         for activity in Activity<ShipmentAttributes>.activities {
             let pid = activity.attributes.packageId
-            // Only track activities whose state is active or stale, not ended
-            switch activity.activityState {
-            case .active, .stale:
+            if shouldTrack(activity.activityState) {
                 if activities[pid] == nil {
                     activities[pid] = activity
                     print("[LiveActivity] rehydrated activity \(activity.id) for \(pid)")
                 }
-            case .ended, .dismissed:
+            } else if shouldRemoveFromCache(activity.activityState) {
                 if activities[pid] != nil {
                     activities.removeValue(forKey: pid)
                 }
-            @unknown default:
-                break
             }
         }
     }
@@ -109,7 +105,7 @@ public final class ShipmentActivityManager {
             Task {
                 for await state in activity.activityStateUpdates {
                     print("[LiveActivity] activity \(activity.id) state: \(state)")
-                    if state == .ended || state == .dismissed || state == .stale {
+                    if self.shouldRemoveFromCache(state) {
                         await MainActor.run {
                             self.lock.lock()
                             self.activities.removeValue(forKey: packageId)
@@ -167,11 +163,27 @@ public final class ShipmentActivityManager {
         if let a = activities[packageId] { return a }
         // Last-chance lookup directly from system list
         return Activity<ShipmentAttributes>.activities
-            .first(where: { $0.attributes.packageId == packageId &&
-                            ($0.activityState == .active || $0.activityState == .stale) })
+            .first(where: { $0.attributes.packageId == packageId && shouldTrack($0.activityState) })
+    }
+
+    private func shouldTrack(_ state: ActivityState) -> Bool {
+        if state == .active {
+            return true
+        }
+        if #available(iOS 16.2, *) {
+            return state == .stale
+        }
+        return false
+    }
+
+    private func shouldRemoveFromCache(_ state: ActivityState) -> Bool {
+        return state == .ended || state == .dismissed
     }
 
     private func registerToken(activityId: String, packageId: String, pushToken: String, gpCode: String) async {
+        let deviceId = await MainActor.run {
+            UIDevice.current.identifierForVendor?.uuidString ?? ""
+        }
         let body: [String: Any] = [
             "action": "registerLiveActivityToken",
             "data": [
@@ -179,7 +191,7 @@ public final class ShipmentActivityManager {
                 "packageId": packageId,
                 "pushToken": pushToken,
                 "gpCode": gpCode,
-                "deviceId": (UIDevice.current.identifierForVendor?.uuidString ?? ""),
+                "deviceId": deviceId,
                 "appVersion": (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? ""
             ]
         ]

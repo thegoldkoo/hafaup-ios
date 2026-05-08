@@ -96,8 +96,6 @@ private func sendBridgeResult(event: String, result: [String: Any]) {
     guard let json = try? JSONSerialization.data(withJSONObject: result),
           let jsonStr = String(data: json, encoding: .utf8) else { return }
     DispatchQueue.main.async {
-        let escaped = jsonStr.replacingOccurrences(of: "\\", with: "\\\\")
-                             .replacingOccurrences(of: "'", with: "\\'")
         let js = "this.dispatchEvent(new CustomEvent('\(event)', { detail: \(jsonStr) }))"
         HafaUp.webView?.evaluateJavaScript(js) { _, err in
             if let err = err { print("[LiveActivityBridge] JS dispatch err: \(err)") }
