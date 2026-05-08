@@ -22,6 +22,15 @@ workflows:
           ruby scripts/setup-widget-target.rb
           # Verify widget target now exists
           ruby -e "require 'xcodeproj'; p = Xcodeproj::Project.open('HafaUp.xcodeproj'); puts 'Targets: ' + p.targets.map(&:name).join(', ')"
+      - name: Auto-bump build number (avoid duplicate version on App Store Connect)
+        script: |
+          # Try to read latest TestFlight build number; fall back to floor (27)
+          LATEST=$(app-store-connect get-latest-testflight-build-number --bundle-id com.app.captainguam 2>/dev/null || echo 0)
+          NEW_BUILD_NUMBER=$((LATEST + 1))
+          if [ "$NEW_BUILD_NUMBER" -lt 27 ]; then NEW_BUILD_NUMBER=27; fi
+          echo "TestFlight latest: $LATEST, setting build number to $NEW_BUILD_NUMBER"
+          export NEW_BUILD_NUMBER
+          ruby scripts/bump-build-number.rb
       - name: Setup signing
         script: |
           keychain initialize
