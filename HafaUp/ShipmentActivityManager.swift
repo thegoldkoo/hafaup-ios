@@ -2,8 +2,14 @@
 //  ShipmentActivityManager.swift
 //  HafaUp (main app target only — NOT widget extension)
 //
-//  v24: Manages Live Activity lifecycle. Called from WebView bridge when
+//  v24/v25: Manages Live Activity lifecycle. Called from WebView bridge when
 //  user taps "Track this package" in PWA, or when push notification triggers.
+//
+//  v25 fixes (post external review):
+//   - P2.1: rehydrate `activities` map from `Activity<ShipmentAttributes>.activities`
+//     on every operation. Otherwise an app-restart while an activity is still
+//     showing leaves us with an empty in-memory map → start() creates a duplicate
+//     and end() reports success but does nothing.
 //
 
 import Foundation
@@ -20,14 +26,37 @@ public final class ShipmentActivityManager {
 
     /// Map of packageId → Activity reference (so we can update/end by package)
     private var activities: [String: Activity<ShipmentAttributes>] = [:]
+    private let lock = NSLock()
 
-    /// Start a Live Activity for a shipment.
-    /// - Parameters:
-    ///   - packageId: GP-... or HU-... identifier
-    ///   - initialState: snapshot of current package state (from server or PWA)
-    ///   - gpCode: optional gpCode for tracking
-    ///   - customerName: display name for static attributes
-    /// - Returns: success bool. On failure, call `ActivityAuthorizationInfo().areActivitiesEnabled` to check.
+    // MARK: - Rehydrate
+
+    /// Repopulate `activities` from the system-wide list of running activities.
+    /// Called at the top of every public operation so we always see activities
+    /// that survived an app restart.
+    private func rehydrate() {
+        lock.lock(); defer { lock.unlock() }
+        for activity in Activity<ShipmentAttributes>.activities {
+            let pid = activity.attributes.packageId
+            // Only track activities whose state is active or stale, not ended
+            switch activity.activityState {
+            case .active, .stale:
+                if activities[pid] == nil {
+                    activities[pid] = activity
+                    print("[LiveActivity] rehydrated activity \(activity.id) for \(pid)")
+                }
+            case .ended, .dismissed:
+                if activities[pid] != nil {
+                    activities.removeValue(forKey: pid)
+                }
+            @unknown default:
+                break
+            }
+        }
+    }
+
+    // MARK: - Public API
+
+    /// Start (or update) a Live Activity for a shipment.
     @discardableResult
     public func start(packageId: String,
                       initialState: ShipmentAttributes.ContentState,
@@ -38,8 +67,11 @@ public final class ShipmentActivityManager {
             return false
         }
 
-        // If we already have an active activity for this package, update it instead
-        if let existing = activities[packageId] {
+        rehydrate()
+
+        // If we already have an active activity for this package (from in-memory
+        // OR rehydrated from system), update it instead of creating a duplicate.
+        if let existing = current(for: packageId) {
             Task { await existing.update(using: initialState) }
             print("[LiveActivity] reused existing activity for \(packageId)")
             return true
@@ -58,9 +90,9 @@ public final class ShipmentActivityManager {
             let activity = try Activity<ShipmentAttributes>.request(
                 attributes: attributes,
                 content: content,
-                pushType: .token  // → we get a push token for backend updates
+                pushType: .token
             )
-            activities[packageId] = activity
+            lock.lock(); activities[packageId] = activity; lock.unlock()
             print("[LiveActivity] started: \(activity.id) for package \(packageId)")
 
             // Watch for push token & forward to Lambda
@@ -80,7 +112,11 @@ public final class ShipmentActivityManager {
                 for await state in activity.activityStateUpdates {
                     print("[LiveActivity] activity \(activity.id) state: \(state)")
                     if state == .ended || state == .dismissed || state == .stale {
-                        await MainActor.run { self.activities.removeValue(forKey: packageId) }
+                        await MainActor.run {
+                            self.lock.lock()
+                            self.activities.removeValue(forKey: packageId)
+                            self.lock.unlock()
+                        }
                     }
                 }
             }
@@ -92,9 +128,11 @@ public final class ShipmentActivityManager {
         }
     }
 
-    /// End Live Activity for a package (user-initiated, or after pickup completion).
+    /// End Live Activity for a package. Even if our in-memory map is empty
+    /// (e.g. after app restart), rehydrate first so we can find the activity.
     public func end(packageId: String, finalState: ShipmentAttributes.ContentState? = nil) {
-        guard let activity = activities[packageId] else {
+        rehydrate()
+        guard let activity = current(for: packageId) else {
             print("[LiveActivity] no active activity for \(packageId)")
             return
         }
@@ -108,20 +146,34 @@ public final class ShipmentActivityManager {
             }
             await activity.end(content, dismissalPolicy: .after(dismissalDate))
             await self.notifyLambdaEnded(activityId: activity.id)
-            await MainActor.run { self.activities.removeValue(forKey: packageId) }
+            await MainActor.run {
+                self.lock.lock()
+                self.activities.removeValue(forKey: packageId)
+                self.lock.unlock()
+            }
             print("[LiveActivity] ended \(activity.id)")
         }
     }
 
     /// End ALL active activities (called on app uninstall path or settings reset)
     public func endAll() {
+        rehydrate()
         for (_, a) in activities {
             Task { await a.end(nil, dismissalPolicy: .immediate) }
         }
-        activities.removeAll()
+        lock.lock(); activities.removeAll(); lock.unlock()
     }
 
-    // MARK: - Lambda integration
+    // MARK: - Private
+
+    private func current(for packageId: String) -> Activity<ShipmentAttributes>? {
+        lock.lock(); defer { lock.unlock() }
+        if let a = activities[packageId] { return a }
+        // Last-chance lookup directly from system list
+        return Activity<ShipmentAttributes>.activities
+            .first(where: { $0.attributes.packageId == packageId &&
+                            ($0.activityState == .active || $0.activityState == .stale) })
+    }
 
     private func registerToken(activityId: String, packageId: String, pushToken: String, gpCode: String) async {
         let body: [String: Any] = [

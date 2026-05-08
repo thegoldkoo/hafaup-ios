@@ -1,11 +1,17 @@
 #!/usr/bin/env ruby
 # scripts/setup-widget-target.rb
 #
-# v24: Adds HafaUpWidget Extension target to HafaUp.xcodeproj.
+# v24/v25: Adds HafaUpWidget Extension target to HafaUp.xcodeproj.
 # Idempotent — safe to run on every build. Used by Codemagic so we don't
 # need a Mac to set up the widget target via Xcode UI.
 #
-# Requires: gem install xcodeproj
+# v25 fixes (post external review):
+#  - P1.1: don't assume PBXGroup named 'HafaUp' exists (files live at root
+#    in this project). Discover the parent group from app target's source
+#    build phase.
+#  - P1.3: keep widget target's MARKETING_VERSION + CURRENT_PROJECT_VERSION
+#    in lock-step with the app target. App Store rejects mismatched
+#    versions for embedded extensions.
 
 require 'xcodeproj'
 
@@ -23,6 +29,35 @@ project = Xcodeproj::Project.open(PROJECT_PATH)
 app_target = project.targets.find { |t| t.name == APP_TARGET_NAME }
 raise "app target #{APP_TARGET_NAME} not found" unless app_target
 
+# Discover the parent group of HafaUp source files.
+# Project layout has files at main_group root with path = "HafaUp/X.swift"
+# rather than under a 'HafaUp' PBXGroup. Find it by sampling an existing
+# known file (ViewController.swift or AppDelegate.swift).
+hafaup_group = nil
+['ViewController.swift', 'AppDelegate.swift', 'WebView.swift'].each do |probe|
+  ref = project.files.find do |f|
+    p = f.path.to_s
+    p == probe || p == "HafaUp/#{probe}" || p.end_with?("/#{probe}")
+  end
+  if ref
+    hafaup_group = ref.parent
+    puts "[setup-widget] resolved hafaup_group via #{probe}: #{hafaup_group.display_name.inspect}"
+    break
+  end
+end
+raise "could not resolve HafaUp parent group" unless hafaup_group
+
+# Determine the path prefix used by existing files (e.g. "HafaUp/X.swift" vs "X.swift")
+existing_paths = app_target.source_build_phase.files.map { |bf| bf.file_ref.path.to_s }
+uses_prefix = existing_paths.any? { |p| p.start_with?("HafaUp/") }
+prefix = uses_prefix ? "#{APP_TARGET_NAME}/" : ""
+puts "[setup-widget] file path prefix in app target = #{prefix.inspect}"
+
+# Borrow MARKETING_VERSION and CURRENT_PROJECT_VERSION from app target
+app_marketing = app_target.build_configurations.first.build_settings['MARKETING_VERSION'] || '1.0'
+app_build     = app_target.build_configurations.first.build_settings['CURRENT_PROJECT_VERSION'] || '1'
+puts "[setup-widget] app version=#{app_marketing} build=#{app_build}"
+
 # 1. Create or fetch widget target
 widget_target = project.targets.find { |t| t.name == WIDGET_NAME }
 if widget_target.nil?
@@ -32,7 +67,7 @@ else
   puts "[setup-widget] widget target already exists"
 end
 
-# 2. Build settings
+# 2. Build settings — versions must MATCH app target
 widget_target.build_configurations.each do |bc|
   bc.build_settings['PRODUCT_BUNDLE_IDENTIFIER']  = WIDGET_BUNDLE
   bc.build_settings['DEVELOPMENT_TEAM']           = TEAM_ID
@@ -42,12 +77,13 @@ widget_target.build_configurations.each do |bc|
   bc.build_settings['INFOPLIST_FILE']             = "#{WIDGET_NAME}/Info.plist"
   bc.build_settings['SKIP_INSTALL']               = 'YES'
   bc.build_settings['ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES'] = 'NO'
-  bc.build_settings['MARKETING_VERSION']          = '1.0'
-  bc.build_settings['CURRENT_PROJECT_VERSION']    = '1'
+  # P1.3: match app target versions so App Store doesn't reject the embedded extension
+  bc.build_settings['MARKETING_VERSION']          = app_marketing
+  bc.build_settings['CURRENT_PROJECT_VERSION']    = app_build
   bc.build_settings['CODE_SIGN_IDENTITY']         = 'Apple Distribution'
 end
 
-# 3. Widget group
+# 3. Widget group (under main_group, mirrors app structure)
 widget_group = project.main_group.find_subpath(WIDGET_NAME, true)
 widget_group.set_source_tree('SOURCE_ROOT')
 widget_group.set_path(WIDGET_NAME)
@@ -67,36 +103,42 @@ unless widget_group.files.find { |f| f.path == 'Info.plist' }
   widget_group.new_reference('Info.plist')
 end
 
-# 4. Shared ShipmentAttributes.swift in BOTH targets
-hafaup_group = project.main_group.find_subpath(APP_TARGET_NAME, false)
-if hafaup_group
-  shared_ref = hafaup_group.files.find { |f| f.path == 'ShipmentAttributes.swift' }
-  if shared_ref
-    unless widget_target.source_build_phase.files_references.include?(shared_ref)
-      widget_target.add_file_references([shared_ref])
-      puts "[setup-widget] added shared ShipmentAttributes.swift to widget target"
-    end
-    unless app_target.source_build_phase.files_references.include?(shared_ref)
-      app_target.add_file_references([shared_ref])
-    end
+# 4. Shared ShipmentAttributes.swift in BOTH targets — use prefix-aware path
+shared_name  = 'ShipmentAttributes.swift'
+shared_disk  = "HafaUp/#{shared_name}"
+shared_pbx   = "#{prefix}#{shared_name}"  # path the project uses
+
+shared_ref = project.files.find { |f| f.path.to_s == shared_pbx || f.path.to_s.end_with?("/#{shared_name}") }
+unless shared_ref
+  if File.exist?(shared_disk)
+    shared_ref = hafaup_group.new_reference(shared_pbx)
+    shared_ref.source_tree = 'SOURCE_ROOT'
+    puts "[setup-widget] created reference for #{shared_pbx}"
   else
-    puts "[setup-widget] creating reference for HafaUp/ShipmentAttributes.swift"
-    if File.exist?('HafaUp/ShipmentAttributes.swift')
-      shared_ref = hafaup_group.new_reference('ShipmentAttributes.swift')
-      app_target.add_file_references([shared_ref])
-      widget_target.add_file_references([shared_ref])
-      puts "[setup-widget] linked shared file to both targets"
-    end
+    puts "[setup-widget] WARN: #{shared_disk} missing — skipping shared file step"
+  end
+end
+if shared_ref
+  unless app_target.source_build_phase.files_references.include?(shared_ref)
+    app_target.add_file_references([shared_ref])
+    puts "[setup-widget] added shared #{shared_name} to app target"
+  end
+  unless widget_target.source_build_phase.files_references.include?(shared_ref)
+    widget_target.add_file_references([shared_ref])
+    puts "[setup-widget] added shared #{shared_name} to widget target"
   end
 end
 
 # 5. App-only new files
 ['ShipmentActivityManager.swift', 'LiveActivityBridge.swift'].each do |fname|
-  full = "HafaUp/#{fname}"
-  next unless File.exist?(full)
-  ref = hafaup_group.files.find { |f| f.path == fname }
+  disk = "HafaUp/#{fname}"
+  next unless File.exist?(disk)
+  pbx = "#{prefix}#{fname}"
+  ref = project.files.find { |f| f.path.to_s == pbx || f.path.to_s.end_with?("/#{fname}") }
   unless ref
-    ref = hafaup_group.new_reference(fname)
+    ref = hafaup_group.new_reference(pbx)
+    ref.source_tree = 'SOURCE_ROOT'
+    puts "[setup-widget] created reference for #{pbx}"
   end
   unless app_target.source_build_phase.files_references.include?(ref)
     app_target.add_file_references([ref])

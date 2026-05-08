@@ -34,7 +34,11 @@ workflows:
       - name: Setup signing
         script: |
           keychain initialize
+          # Fetch profiles for BOTH bundle ids (app + widget extension)
           app-store-connect fetch-signing-files com.app.captainguam \
+            --type IOS_APP_STORE \
+            --create
+          app-store-connect fetch-signing-files com.app.captainguam.HafaUpWidget \
             --type IOS_APP_STORE \
             --create
           keychain add-certificates

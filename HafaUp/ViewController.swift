@@ -263,13 +263,29 @@ extension ViewController: WKScriptMessageHandler {
         if message.name == "push-token" {
             handleFCMToken()
         }
-        // v24: Live Activity bridge dispatch
-        if #available(iOS 16.1, *) {
-            if message.name == "live-activity-start" {
-                handleStartLiveActivity(message: message)
-            }
-            if message.name == "live-activity-end" {
-                handleEndLiveActivity(message: message)
+        // v24/v25: Live Activity bridge dispatch
+        if message.name == "live-activity-start" || message.name == "live-activity-end" {
+            if #available(iOS 16.1, *) {
+                if message.name == "live-activity-start" {
+                    handleStartLiveActivity(message: message)
+                } else {
+                    handleEndLiveActivity(message: message)
+                }
+            } else {
+                // P2.2: respond on older iOS so PWA isn't left waiting
+                let action = message.name == "live-activity-start" ? "start" : "end"
+                let result: [String: Any] = [
+                    "success": false,
+                    "error": "iOS 16.1+ required for Live Activities",
+                    "action": action
+                ]
+                if let data = try? JSONSerialization.data(withJSONObject: result),
+                   let json = String(data: data, encoding: .utf8) {
+                    DispatchQueue.main.async {
+                        let js = "this.dispatchEvent(new CustomEvent('live-activity-result', { detail: \(json) }))"
+                        HafaUp.webView?.evaluateJavaScript(js, completionHandler: nil)
+                    }
+                }
             }
         }
 
