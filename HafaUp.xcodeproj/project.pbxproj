@@ -17,6 +17,9 @@
 		595F23AD25CEFBFE0053416C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595F23A225CEFBFE0053416C /* AppDelegate.swift */; };
 		595F23AE25CEFBFE0053416C /* Printer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595F23A325CEFBFE0053416C /* Printer.swift */; };
 		595F23AF25CEFBFE0053416C /* WebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 595F23A425CEFBFE0053416C /* WebView.swift */; };
+		C0D3A1000000000000000001 /* ShipmentAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000001 /* ShipmentAttributes.swift */; };
+		C0D3A1000000000000000002 /* ShipmentActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000002 /* ShipmentActivityManager.swift */; };
+		C0D3A1000000000000000003 /* LiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000003 /* LiveActivityBridge.swift */; };
 		CDC0FE292388222C002C8D56 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CDC0FE252388222B002C8D56 /* Main.storyboard */; };
 		CDC0FE2A2388222C002C8D56 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CDC0FE272388222B002C8D56 /* LaunchScreen.storyboard */; };
 		E1E260C850014D6B34B487B0 /* Pods_HafaUp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9D7FFB2FBE6EEBCA807B6A /* Pods_HafaUp.framework */; };
@@ -36,6 +39,9 @@
 		595F23A225CEFBFE0053416C /* AppDelegate.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = "HafaUp/AppDelegate.swift"; sourceTree = "<group>"; };
 		595F23A325CEFBFE0053416C /* Printer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = Printer.swift; path = "HafaUp/Printer.swift"; sourceTree = "<group>"; };
 		595F23A425CEFBFE0053416C /* WebView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = WebView.swift; path = "HafaUp/WebView.swift"; sourceTree = "<group>"; };
+		C0D3A2000000000000000001 /* ShipmentAttributes.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ShipmentAttributes.swift; path = "HafaUp/ShipmentAttributes.swift"; sourceTree = "<group>"; };
+		C0D3A2000000000000000002 /* ShipmentActivityManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ShipmentActivityManager.swift; path = "HafaUp/ShipmentActivityManager.swift"; sourceTree = "<group>"; };
+		C0D3A2000000000000000003 /* LiveActivityBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveActivityBridge.swift; path = "HafaUp/LiveActivityBridge.swift"; sourceTree = "<group>"; };
 		BE9D7FFB2FBE6EEBCA807B6A /* Pods_HafaUp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "Pods_HafaUp.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEE8E5C625AE96C07F8AADED /* Pods-HafaUp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HafaUp.debug.xcconfig"; path = "Target Support Files/Pods-HafaUp/Pods-HafaUp.debug.xcconfig"; sourceTree = "<group>"; };
 		CDC0FE262388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "HafaUp/Base.lproj/Main.storyboard"; sourceTree = "<group>"; };
@@ -83,6 +89,9 @@
 				595F239F25CEFBFE0053416C /* PushNotifications.swift */,
 				595F239D25CEFBFD0053416C /* SceneDelegate.swift */,
 				595F239A25CEFBFD0053416C /* Settings.swift */,
+				C0D3A2000000000000000001 /* ShipmentAttributes.swift */,
+				C0D3A2000000000000000002 /* ShipmentActivityManager.swift */,
+				C0D3A2000000000000000003 /* LiveActivityBridge.swift */,
 				595F23A125CEFBFE0053416C /* ViewController.swift */,
 				CDC0FE272388222B002C8D56 /* LaunchScreen.storyboard */,
 				CDC0FE252388222B002C8D56 /* Main.storyboard */,
@@ -218,6 +227,9 @@
 				595F23AC25CEFBFE0053416C /* ViewController.swift in Sources */,
 				595F23AA25CEFBFE0053416C /* PushNotifications.swift in Sources */,
 				595F23AF25CEFBFE0053416C /* WebView.swift in Sources */,
+				C0D3A1000000000000000001 /* ShipmentAttributes.swift in Sources */,
+				C0D3A1000000000000000002 /* ShipmentActivityManager.swift in Sources */,
+				C0D3A1000000000000000003 /* LiveActivityBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

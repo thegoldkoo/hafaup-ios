@@ -85,11 +85,9 @@ public final class ShipmentActivityManager {
         )
 
         do {
-            let staleDate = Date().addingTimeInterval(8 * 3600)
-            let content = ActivityContent(state: initialState, staleDate: staleDate)
             let activity = try Activity<ShipmentAttributes>.request(
                 attributes: attributes,
-                content: content,
+                contentState: initialState,
                 pushType: .token
             )
             lock.lock(); activities[packageId] = activity; lock.unlock()
@@ -138,13 +136,11 @@ public final class ShipmentActivityManager {
         }
         Task {
             let dismissalDate = Date().addingTimeInterval(4 * 3600)
-            let content: ActivityContent<ShipmentAttributes.ContentState>?
             if let s = finalState {
-                content = ActivityContent(state: s, staleDate: nil)
+                await activity.end(using: s, dismissalPolicy: .after(dismissalDate))
             } else {
-                content = nil
+                await activity.end(dismissalPolicy: .after(dismissalDate))
             }
-            await activity.end(content, dismissalPolicy: .after(dismissalDate))
             await self.notifyLambdaEnded(activityId: activity.id)
             await MainActor.run {
                 self.lock.lock()
@@ -159,7 +155,7 @@ public final class ShipmentActivityManager {
     public func endAll() {
         rehydrate()
         for (_, a) in activities {
-            Task { await a.end(nil, dismissalPolicy: .immediate) }
+            Task { await a.end(dismissalPolicy: .immediate) }
         }
         lock.lock(); activities.removeAll(); lock.unlock()
     }

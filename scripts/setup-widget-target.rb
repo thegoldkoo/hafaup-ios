@@ -29,6 +29,17 @@ project = Xcodeproj::Project.open(PROJECT_PATH)
 app_target = project.targets.find { |t| t.name == APP_TARGET_NAME }
 raise "app target #{APP_TARGET_NAME} not found" unless app_target
 
+def source_file_in_target?(target, filename)
+  target.source_build_phase.files_references.any? do |ref|
+    next false unless ref
+
+    [ref.path, ref.name, ref.display_name].compact.any? do |value|
+      path = value.to_s
+      path == filename || path.end_with?("/#{filename}")
+    end
+  end
+end
+
 # Discover the parent group of HafaUp source files.
 # Project layout has files at main_group root with path = "HafaUp/X.swift"
 # rather than under a 'HafaUp' PBXGroup. Find it by sampling an existing
@@ -190,6 +201,17 @@ unless app_target.dependencies.any? { |d| d.target == widget_target }
   app_target.add_dependency(widget_target)
   puts "[setup-widget] app depends on widget"
 end
+
+required_app_sources = [
+  'ShipmentAttributes.swift',
+  'ShipmentActivityManager.swift',
+  'LiveActivityBridge.swift'
+]
+missing_app_sources = required_app_sources.reject { |fname| source_file_in_target?(app_target, fname) }
+unless missing_app_sources.empty?
+  raise "[setup-widget] app target missing sources: #{missing_app_sources.join(', ')}"
+end
+puts "[setup-widget] verified app target live activity sources"
 
 project.save
 puts "[setup-widget] saved. DONE."
