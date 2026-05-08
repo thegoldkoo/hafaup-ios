@@ -43,6 +43,11 @@ workflows:
             --create
           keychain add-certificates
           xcode-project use-profiles --project HafaUp.xcodeproj
+      - name: Apply widget signing (belt-and-suspenders)
+        script: |
+          # Ensures the widget target gets its provisioning profile explicitly
+          # set, in case use-profiles missed the freshly-added target.
+          ruby scripts/apply-widget-signing.rb
       - name: Fix plist icons and storyboards
         script: |
           /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" HafaUp/Info.plist 2>/dev/null
