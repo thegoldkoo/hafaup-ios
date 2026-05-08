@@ -62,13 +62,38 @@ puts "[setup-widget] app version=#{app_marketing} build=#{app_build}"
 widget_target = project.targets.find { |t| t.name == WIDGET_NAME }
 if widget_target.nil?
   puts "[setup-widget] creating widget target #{WIDGET_NAME}"
-  widget_target = project.new_target(:app_extension, WIDGET_NAME, :ios, DEPLOYMENT_TGT)
+  widget_target = project.new_target(
+    :app_extension,
+    WIDGET_NAME,
+    :ios,
+    DEPLOYMENT_TGT,
+    project.products_group,
+    :swift,
+    WIDGET_NAME
+  )
 else
   puts "[setup-widget] widget target already exists"
 end
 
+# Xcode 26 archives this target as ".appex" if product metadata is left blank.
+# Make the product identity concrete before xcodebuild resolves outputs.
+widget_target.product_name = WIDGET_NAME if widget_target.respond_to?(:product_name=)
+widget_target.product_type = 'com.apple.product-type.app-extension'
+if widget_target.product_reference
+  widget_target.product_reference.name = "#{WIDGET_NAME}.appex"
+  widget_target.product_reference.path = "#{WIDGET_NAME}.appex"
+  widget_target.product_reference.explicit_file_type = 'wrapper.app-extension'
+  widget_target.product_reference.include_in_index = 0
+end
+
 # 2. Build settings — versions must MATCH app target
 widget_target.build_configurations.each do |bc|
+  bc.build_settings['PRODUCT_NAME']               = WIDGET_NAME
+  bc.build_settings['EXECUTABLE_NAME']            = '$(PRODUCT_NAME)'
+  bc.build_settings['WRAPPER_EXTENSION']          = 'appex'
+  bc.build_settings['WRAPPER_NAME']               = '$(PRODUCT_NAME).$(WRAPPER_EXTENSION)'
+  bc.build_settings['FULL_PRODUCT_NAME']          = '$(WRAPPER_NAME)'
+  bc.build_settings['CONTENTS_FOLDER_PATH']       = '$(WRAPPER_NAME)'
   bc.build_settings['PRODUCT_BUNDLE_IDENTIFIER']  = WIDGET_BUNDLE
   bc.build_settings['DEVELOPMENT_TEAM']           = TEAM_ID
   bc.build_settings['CODE_SIGN_STYLE']            = 'Manual'

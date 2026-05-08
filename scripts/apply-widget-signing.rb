@@ -64,7 +64,8 @@ def find_widget_profile
     Dir.glob(File.join(dir, '*.mobileprovision')).each do |path|
       info = parse_profile(path)
       next unless info
-      app_id = info['application-identifier'].to_s
+      app_id = info.dig('Entitlements', 'application-identifier').to_s
+      app_id = info['application-identifier'].to_s if app_id.empty?
       # application-identifier is "TEAMID.com.app.captainguam.HafaUpWidget"
       if app_id.end_with?(".#{WIDGET_BUNDLE}")
         return { path: path, name: info['Name'], uuid: info['UUID'] }
@@ -77,11 +78,9 @@ end
 puts "[apply-widget-signing] looking for profile matching #{WIDGET_BUNDLE}"
 profile = find_widget_profile
 if profile.nil?
-  puts "[apply-widget-signing] WARN: no .mobileprovision found for #{WIDGET_BUNDLE}"
-  puts "                           Codemagic's use-profiles step should have placed one"
-  puts "                           in the keychain — relying on its build setting injection."
-  puts "                           Skipping explicit override."
-  exit 0
+  warn "[apply-widget-signing] ERROR: no .mobileprovision found for #{WIDGET_BUNDLE}"
+  warn "                              Check the fetch-signing-files step for the widget bundle id."
+  exit 1
 end
 
 puts "[apply-widget-signing] found profile: #{profile[:name]} (UUID #{profile[:uuid]})"

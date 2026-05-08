@@ -42,7 +42,9 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles --project HafaUp.xcodeproj
+          xcode-project use-profiles \
+            --project HafaUp.xcodeproj \
+            --profile "$HOME/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"
       - name: Apply widget signing (belt-and-suspenders)
         script: |
           # Ensures the widget target gets its provisioning profile explicitly
