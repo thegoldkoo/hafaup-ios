@@ -14,6 +14,14 @@ workflows:
       - name: Install CocoaPods
         script: |
           pod install
+      - name: Setup Widget Extension target (Live Activity)
+        script: |
+          # v24: idempotently add HafaUpWidget target to project.pbxproj
+          # so we don't need a Mac with Xcode UI to set this up.
+          gem install xcodeproj --no-document
+          ruby scripts/setup-widget-target.rb
+          # Verify widget target now exists
+          ruby -e "require 'xcodeproj'; p = Xcodeproj::Project.open('HafaUp.xcodeproj'); puts 'Targets: ' + p.targets.map(&:name).join(', ')"
       - name: Setup signing
         script: |
           keychain initialize
