@@ -263,5 +263,15 @@ extension ViewController: WKScriptMessageHandler {
         if message.name == "push-token" {
             handleFCMToken()
         }
+        // v24: Live Activity bridge dispatch
+        if #available(iOS 16.1, *) {
+            if message.name == "live-activity-start" {
+                handleStartLiveActivity(message: message)
+            }
+            if message.name == "live-activity-end" {
+                handleEndLiveActivity(message: message)
+            }
+        }
+
   }
 }
