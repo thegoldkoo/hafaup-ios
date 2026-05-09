@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import ActivityKit
 import WebKit
 
 /// Handle "live-activity-start" message from PWA.
@@ -21,14 +22,24 @@ import WebKit
 /// }
 @available(iOS 16.1, *)
 func handleStartLiveActivity(message: WKScriptMessage) {
+    let diagnostics = liveActivityDiagnostics()
+    guard diagnostics.widgetExtensionInstalled else {
+        sendBridgeResult(event: "live-activity-result", result: [
+            "success": false,
+            "error": "HafaUpWidget.appex is missing from this app build",
+            "diagnostics": diagnostics.asDictionary
+        ])
+        return
+    }
+
     guard let payload = parseLiveActivityMessage(message) else {
         sendBridgeResult(event: "live-activity-result",
-                         result: ["success": false, "error": "invalid payload"])
+                         result: ["success": false, "error": "invalid payload", "diagnostics": diagnostics.asDictionary])
         return
     }
     guard let packageId = payload["packageId"] as? String, !packageId.isEmpty else {
         sendBridgeResult(event: "live-activity-result",
-                         result: ["success": false, "error": "packageId required"])
+                         result: ["success": false, "error": "packageId required", "diagnostics": diagnostics.asDictionary])
         return
     }
     let gpCode = (payload["gpCode"] as? String) ?? ""
@@ -46,7 +57,8 @@ func handleStartLiveActivity(message: WKScriptMessage) {
     sendBridgeResult(event: "live-activity-result", result: [
         "success": ok,
         "packageId": packageId,
-        "action": "start"
+        "action": "start",
+        "diagnostics": diagnostics.asDictionary
     ])
 }
 
@@ -101,4 +113,49 @@ private func sendBridgeResult(event: String, result: [String: Any]) {
             if let err = err { print("[LiveActivityBridge] JS dispatch err: \(err)") }
         }
     }
+}
+
+private struct LiveActivityDiagnostics {
+    let widgetExtensionInstalled: Bool
+    let plugIns: [String]
+    let appVersion: String
+    let appBuild: String
+    let activitiesEnabled: Bool?
+
+    var asDictionary: [String: Any] {
+        var dict: [String: Any] = [
+            "widgetExtensionInstalled": widgetExtensionInstalled,
+            "plugIns": plugIns,
+            "appVersion": appVersion,
+            "appBuild": appBuild
+        ]
+        if let activitiesEnabled = activitiesEnabled {
+            dict["activitiesEnabled"] = activitiesEnabled
+        }
+        return dict
+    }
+}
+
+private func liveActivityDiagnostics() -> LiveActivityDiagnostics {
+    let plugInsURL = Bundle.main.builtInPlugInsURL
+    let plugIns = (try? FileManager.default.contentsOfDirectory(
+        at: plugInsURL ?? Bundle.main.bundleURL,
+        includingPropertiesForKeys: nil
+    ))?.map { $0.lastPathComponent }.sorted() ?? []
+
+    let info = Bundle.main.infoDictionary ?? [:]
+    let activitiesEnabled: Bool?
+    if #available(iOS 16.1, *) {
+        activitiesEnabled = ActivityAuthorizationInfo().areActivitiesEnabled
+    } else {
+        activitiesEnabled = nil
+    }
+
+    return LiveActivityDiagnostics(
+        widgetExtensionInstalled: plugIns.contains("HafaUpWidget.appex"),
+        plugIns: plugIns,
+        appVersion: (info["CFBundleShortVersionString"] as? String) ?? "",
+        appBuild: (info["CFBundleVersion"] as? String) ?? "",
+        activitiesEnabled: activitiesEnabled
+    )
 }

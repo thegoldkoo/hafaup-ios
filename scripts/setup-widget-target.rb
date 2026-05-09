@@ -14,6 +14,7 @@
 #    versions for embedded extensions.
 
 require 'xcodeproj'
+require 'rexml/document'
 
 PROJECT_PATH    = 'HafaUp.xcodeproj'
 APP_TARGET_NAME = 'HafaUp'
@@ -38,6 +39,48 @@ def source_file_in_target?(target, filename)
       path == filename || path.end_with?("/#{filename}")
     end
   end
+end
+
+def ensure_scheme_builds_widget(widget_target)
+  scheme_path = File.join('HafaUp.xcodeproj', 'xcshareddata', 'xcschemes', "#{APP_TARGET_NAME}.xcscheme")
+  return unless File.exist?(scheme_path)
+
+  doc = REXML::Document.new(File.read(scheme_path))
+  entries = doc.elements['/Scheme/BuildAction/BuildActionEntries']
+  return unless entries
+
+  already_present = false
+  entries.each_element('BuildActionEntry/BuildableReference') do |ref|
+    if ref.attributes['BlueprintIdentifier'] == widget_target.uuid
+      already_present = true
+      break
+    end
+  end
+  return if already_present
+
+  entry = entries.add_element('BuildActionEntry', {
+    'buildForTesting' => 'YES',
+    'buildForRunning' => 'YES',
+    'buildForProfiling' => 'YES',
+    'buildForArchiving' => 'YES',
+    'buildForAnalyzing' => 'YES'
+  })
+  entry.add_element('BuildableReference', {
+    'BuildableIdentifier' => 'primary',
+    'BlueprintIdentifier' => widget_target.uuid,
+    'BuildableName' => "#{WIDGET_NAME}.appex",
+    'BlueprintName' => WIDGET_NAME,
+    'ReferencedContainer' => "container:#{PROJECT_PATH}"
+  })
+
+  formatter = REXML::Formatters::Pretty.new(3)
+  formatter.compact = true
+  File.open(scheme_path, 'w') do |file|
+    file.write(%(<?xml version="1.0" encoding="UTF-8"?>\n))
+    formatter.write(doc.root, file)
+    file.write("\n")
+  end
+  puts "[setup-widget] added #{WIDGET_NAME} to #{scheme_path} build action"
 end
 
 # Discover the parent group of HafaUp source files.
@@ -99,6 +142,7 @@ end
 
 # 2. Build settings — versions must MATCH app target
 widget_target.build_configurations.each do |bc|
+  bc.build_settings['APPLICATION_EXTENSION_API_ONLY'] = 'YES'
   bc.build_settings['PRODUCT_NAME']               = WIDGET_NAME
   bc.build_settings['EXECUTABLE_NAME']            = '$(PRODUCT_NAME)'
   bc.build_settings['WRAPPER_EXTENSION']          = 'appex'
@@ -202,6 +246,8 @@ unless app_target.dependencies.any? { |d| d.target == widget_target }
   puts "[setup-widget] app depends on widget"
 end
 
+ensure_scheme_builds_widget(widget_target)
+
 required_app_sources = [
   'ShipmentAttributes.swift',
   'ShipmentActivityManager.swift',
@@ -212,6 +258,26 @@ unless missing_app_sources.empty?
   raise "[setup-widget] app target missing sources: #{missing_app_sources.join(', ')}"
 end
 puts "[setup-widget] verified app target live activity sources"
+
+required_widget_sources = [
+  'ShipmentAttributes.swift',
+  'HafaUpWidgetBundle.swift',
+  'ShipmentLiveActivity.swift'
+]
+missing_widget_sources = required_widget_sources.reject { |fname| source_file_in_target?(widget_target, fname) }
+unless missing_widget_sources.empty?
+  raise "[setup-widget] widget target missing sources: #{missing_widget_sources.join(', ')}"
+end
+puts "[setup-widget] verified widget target live activity sources"
+
+unless widget_target.product_reference && widget_target.product_reference.path == "#{WIDGET_NAME}.appex"
+  raise "[setup-widget] widget product is not #{WIDGET_NAME}.appex"
+end
+
+unless embed_phase.files_references.include?(widget_target.product_reference)
+  raise "[setup-widget] app target is not embedding #{WIDGET_NAME}.appex"
+end
+puts "[setup-widget] verified #{WIDGET_NAME}.appex is embedded"
 
 project.save
 puts "[setup-widget] saved. DONE."

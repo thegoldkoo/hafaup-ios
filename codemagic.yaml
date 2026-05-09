@@ -263,17 +263,9 @@ workflows:
           xcode-project build-ipa \
             --workspace "HafaUp.xcworkspace" \
             --scheme "HafaUp"
-      - name: Verify HafaUpWidget.appex inside IPA (FATAL if missing)
+      - name: Verify Live Activity widget in IPA
         script: |
-          set -e
-          IPA=$(ls $CM_BUILD_DIR/build/ios/ipa/*.ipa | head -1)
-          echo "Inspecting $IPA"
-          unzip -l "$IPA" | grep -i "HafaUpWidget\.appex" || {
-            echo "❌ HafaUpWidget.appex NOT in final IPA — Live Activity will not render"
-            unzip -l "$IPA" | head -30
-            exit 1
-          }
-          echo "✅ HafaUpWidget.appex confirmed inside IPA"
+          python3 scripts/verify-live-activity-ipa.py
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
