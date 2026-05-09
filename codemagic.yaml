@@ -33,6 +33,7 @@ workflows:
           ruby scripts/bump-build-number.rb
       - name: Setup signing
         script: |
+          set -euo pipefail
           keychain initialize
           # Fetch profiles for BOTH bundle ids (app + widget extension)
           app-store-connect fetch-signing-files com.app.captainguam \
@@ -42,9 +43,7 @@ workflows:
             --type IOS_APP_STORE \
             --create
           keychain add-certificates
-          xcode-project use-profiles \
-            --project HafaUp.xcodeproj \
-            --profile "$HOME/Library/MobileDevice/Provisioning Profiles/*.mobileprovision"
+          xcode-project use-profiles --project HafaUp.xcodeproj
       - name: Apply widget signing (belt-and-suspenders)
         script: |
           # Ensures the widget target gets its provisioning profile explicitly
@@ -80,7 +79,17 @@ workflows:
             puts "[verify] ❌ HafaUpWidget.appex NOT embedded in HafaUp main target"
             exit 1
           end
-          puts "[verify] ✅ HafaUpWidget target present + sources OK + embedded"
+          unsigned_configs = widget.build_configurations.select do |bc|
+            specifier = bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'].to_s
+            uuid = bc.build_settings['PROVISIONING_PROFILE'].to_s
+            puts "[verify] HafaUpWidget/#{bc.name} profile_specifier=#{specifier.inspect} profile=#{uuid.inspect}"
+            specifier.empty? && uuid.empty?
+          end
+          unless unsigned_configs.empty?
+            puts "[verify] ❌ HafaUpWidget signing profile missing for: #{unsigned_configs.map(&:name).join(', ')}"
+            exit 1
+          end
+          puts "[verify] ✅ HafaUpWidget target present + sources OK + embedded + signed"
           RUBY_EOF
       - name: Fix plist icons and storyboards
         script: |

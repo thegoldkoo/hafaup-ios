@@ -65,6 +65,22 @@ rescue LoadError
   { 'UUID' => uuid, 'Name' => name, 'application-identifier' => app_id, 'TeamIdentifier' => [team] }
 end
 
+def bundle_id_from_application_identifier(app_id)
+  app_id.to_s.split('.', 2)[1].to_s
+end
+
+def profile_match_kind(app_id, bundle_id)
+  profile_bundle = bundle_id_from_application_identifier(app_id)
+  return :exact if profile_bundle == bundle_id
+
+  if profile_bundle.end_with?('.*')
+    wildcard_prefix = profile_bundle[0...-1]
+    return :wildcard if bundle_id.start_with?(wildcard_prefix)
+  end
+
+  nil
+end
+
 def find_widget_profile
   profile_paths = []
 
@@ -83,20 +99,23 @@ def find_widget_profile
   profile_paths = profile_paths.uniq
   puts "[apply-widget-signing] scanned #{profile_paths.length} mobileprovision file(s)"
 
+  matches = []
+
   profile_paths.each do |path|
     info = parse_profile(path)
     next unless info
 
     app_id = info.dig('Entitlements', 'application-identifier').to_s
     app_id = info['application-identifier'].to_s if app_id.empty?
-    # application-identifier is "TEAMID.com.app.captainguam.HafaUpWidget"
-    puts "  profile candidate: #{File.basename(path)} app_id=#{app_id} name=#{info['Name']}"
-    if app_id.end_with?(".#{WIDGET_BUNDLE}")
-      return { path: path, name: info['Name'], uuid: info['UUID'] }
+    bundle_id = bundle_id_from_application_identifier(app_id)
+    match_kind = profile_match_kind(app_id, WIDGET_BUNDLE)
+    puts "  profile candidate: #{File.basename(path)} bundle=#{bundle_id} match=#{match_kind || 'no'} name=#{info['Name']}"
+    if match_kind
+      matches << { path: path, name: info['Name'], uuid: info['UUID'], kind: match_kind }
     end
   end
 
-  nil
+  matches.find { |candidate| candidate[:kind] == :exact } || matches.first
 end
 
 puts "[apply-widget-signing] looking for profile matching #{WIDGET_BUNDLE}"
@@ -110,13 +129,15 @@ if widget.nil?
 end
 
 if profile.nil?
-  warn "[apply-widget-signing] WARN: no .mobileprovision found for #{WIDGET_BUNDLE}"
-  warn "                             Leaving xcode-project use-profiles settings in place."
+  warn "[apply-widget-signing] ERROR: no .mobileprovision found for #{WIDGET_BUNDLE}"
+  warn "                              The widget extension must have its own App Store provisioning profile."
+  warn "                              Check the fetch-signing-files step and Apple Developer bundle id."
   widget.build_configurations.each do |bc|
     puts "  #{widget.name}/#{bc.name}: profile_specifier=#{bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'].inspect} profile=#{bc.build_settings['PROVISIONING_PROFILE'].inspect}"
   end
+  exit 1
 else
-  puts "[apply-widget-signing] found profile: #{profile[:name]} (UUID #{profile[:uuid]})"
+  puts "[apply-widget-signing] found #{profile[:kind]} profile: #{profile[:name]} (UUID #{profile[:uuid]})"
   widget.build_configurations.each do |bc|
     bc.build_settings['CODE_SIGN_STYLE']                = 'Manual'
     bc.build_settings['CODE_SIGN_IDENTITY']             = 'Apple Distribution'
@@ -124,6 +145,8 @@ else
     bc.build_settings['PROVISIONING_PROFILE_SPECIFIER'] = profile[:name]
     bc.build_settings['PROVISIONING_PROFILE']           = profile[:uuid]
     bc.build_settings['PRODUCT_BUNDLE_IDENTIFIER']      = WIDGET_BUNDLE
+    bc.build_settings.delete('PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]')
+    bc.build_settings.delete('PROVISIONING_PROFILE[sdk=iphoneos*]')
     puts "  #{widget.name}/#{bc.name}: profile = #{profile[:name]}"
   end
 end
