@@ -50,6 +50,38 @@ workflows:
           # Ensures the widget target gets its provisioning profile explicitly
           # set, in case use-profiles missed the freshly-added target.
           ruby scripts/apply-widget-signing.rb
+      - name: Verify widget target is present (FATAL if missing)
+        script: |
+          # v1.0.4: Don't let the build proceed if HafaUpWidget target is missing.
+          # Previous 1.0.3 build silently shipped without the widget extension,
+          # so Activity.request() succeeded but iOS had no UI to render the
+          # Live Activity card on lock screen.
+          set -e
+          ruby <<'RUBY_EOF'
+          require 'xcodeproj'
+          p = Xcodeproj::Project.open('HafaUp.xcodeproj')
+          targets = p.targets.map(&:name)
+          puts "[verify] targets in project: #{targets.inspect}"
+          unless targets.include?('HafaUpWidget')
+            puts "[verify] ❌ HafaUpWidget target MISSING — aborting build"
+            exit 1
+          end
+          widget = p.targets.find { |t| t.name == 'HafaUpWidget' }
+          srcs = widget.source_build_phase.files.map { |f| f.file_ref.path.to_s }
+          puts "[verify] HafaUpWidget sources: #{srcs.inspect}"
+          required = ['HafaUpWidgetBundle.swift', 'ShipmentLiveActivity.swift', 'ShipmentAttributes.swift']
+          missing = required.reject { |r| srcs.any? { |s| s.end_with?(r) } }
+          unless missing.empty?
+            puts "[verify] ❌ HafaUpWidget missing source files: #{missing.inspect}"
+            exit 1
+          end
+          embed = p.targets.find { |t| t.name == 'HafaUp' }.copy_files_build_phases.find { |ph| ph.symbol_dst_subfolder_spec == :plug_ins }
+          unless embed && embed.files_references.include?(widget.product_reference)
+            puts "[verify] ❌ HafaUpWidget.appex NOT embedded in HafaUp main target"
+            exit 1
+          end
+          puts "[verify] ✅ HafaUpWidget target present + sources OK + embedded"
+          RUBY_EOF
       - name: Fix plist icons and storyboards
         script: |
           /usr/libexec/PlistBuddy -c "Delete :CFBundleIconName" HafaUp/Info.plist 2>/dev/null
@@ -231,6 +263,17 @@ workflows:
           xcode-project build-ipa \
             --workspace "HafaUp.xcworkspace" \
             --scheme "HafaUp"
+      - name: Verify HafaUpWidget.appex inside IPA (FATAL if missing)
+        script: |
+          set -e
+          IPA=$(ls $CM_BUILD_DIR/build/ios/ipa/*.ipa | head -1)
+          echo "Inspecting $IPA"
+          unzip -l "$IPA" | grep -i "HafaUpWidget\.appex" || {
+            echo "❌ HafaUpWidget.appex NOT in final IPA — Live Activity will not render"
+            unzip -l "$IPA" | head -30
+            exit 1
+          }
+          echo "✅ HafaUpWidget.appex confirmed inside IPA"
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
