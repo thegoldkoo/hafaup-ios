@@ -31,6 +31,23 @@ workflows:
           echo "TestFlight latest: $LATEST, setting build number to $NEW_BUILD_NUMBER"
           export NEW_BUILD_NUMBER
           ruby scripts/bump-build-number.rb
+      - name: Fetch widget provisioning profile
+        script: |
+          set -euo pipefail
+          # environment.ios_signing only fetches the main app profile (com.app.captainguam).
+          # The widget extension needs its OWN profile (com.app.captainguam.HafaUpWidget).
+          # The App ID is already registered in Apple Developer Console with a
+          # manually-created App Store provisioning profile; --create acts as a
+          # safety fallback if for some reason the profile isn't found.
+          echo "[fetch-widget] fetching profile for com.app.captainguam.HafaUpWidget"
+          app-store-connect fetch-signing-files \
+            "com.app.captainguam.HafaUpWidget" \
+            --type IOS_APP_STORE \
+            --create
+          echo "[fetch-widget] profiles in MobileDevice dir:"
+          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
+          # Re-import certs (idempotent) so use-profiles can match cert+profile
+          keychain add-certificates
       - name: Setup signing
         script: |
           set -euo pipefail
