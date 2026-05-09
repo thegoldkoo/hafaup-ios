@@ -20,10 +20,38 @@
 		C0D3A1000000000000000001 /* ShipmentAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000001 /* ShipmentAttributes.swift */; };
 		C0D3A1000000000000000002 /* ShipmentActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000002 /* ShipmentActivityManager.swift */; };
 		C0D3A1000000000000000003 /* LiveActivityBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000003 /* LiveActivityBridge.swift */; };
+		C0D3B4000000000000000001 /* HafaUpWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B3000000000000000001 /* HafaUpWidgetBundle.swift */; };
+		C0D3B4000000000000000002 /* ShipmentLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3B3000000000000000002 /* ShipmentLiveActivity.swift */; };
+		C0D3B4000000000000000003 /* ShipmentAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0D3A2000000000000000001 /* ShipmentAttributes.swift */; };
+		C0D3B4000000000000000004 /* HafaUpWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = C0D3B1000000000000000001 /* HafaUpWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		CDC0FE292388222C002C8D56 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CDC0FE252388222B002C8D56 /* Main.storyboard */; };
 		CDC0FE2A2388222C002C8D56 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = CDC0FE272388222B002C8D56 /* LaunchScreen.storyboard */; };
 		E1E260C850014D6B34B487B0 /* Pods_HafaUp.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE9D7FFB2FBE6EEBCA807B6A /* Pods_HafaUp.framework */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		C0D3B7000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = CD89F881237E9D9200C436A1 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C0D3B0000000000000000001;
+			remoteInfo = HafaUpWidget;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		C0D3B5000000000000000004 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				C0D3B4000000000000000004 /* HafaUpWidget.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		25D3517E267A48E0002E5DC0 /* GoogleService-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "HafaUp/GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -42,6 +70,10 @@
 		C0D3A2000000000000000001 /* ShipmentAttributes.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ShipmentAttributes.swift; path = "HafaUp/ShipmentAttributes.swift"; sourceTree = "<group>"; };
 		C0D3A2000000000000000002 /* ShipmentActivityManager.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = ShipmentActivityManager.swift; path = "HafaUp/ShipmentActivityManager.swift"; sourceTree = "<group>"; };
 		C0D3A2000000000000000003 /* LiveActivityBridge.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; name = LiveActivityBridge.swift; path = "HafaUp/LiveActivityBridge.swift"; sourceTree = "<group>"; };
+		C0D3B1000000000000000001 /* HafaUpWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = HafaUpWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0D3B3000000000000000001 /* HafaUpWidgetBundle.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HafaUpWidgetBundle.swift; sourceTree = "<group>"; };
+		C0D3B3000000000000000002 /* ShipmentLiveActivity.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ShipmentLiveActivity.swift; sourceTree = "<group>"; };
+		C0D3B3000000000000000003 /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		BE9D7FFB2FBE6EEBCA807B6A /* Pods_HafaUp.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = "Pods_HafaUp.framework"; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEE8E5C625AE96C07F8AADED /* Pods-HafaUp.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-HafaUp.debug.xcconfig"; path = "Target Support Files/Pods-HafaUp/Pods-HafaUp.debug.xcconfig"; sourceTree = "<group>"; };
 		CDC0FE262388222B002C8D56 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = "HafaUp/Base.lproj/Main.storyboard"; sourceTree = "<group>"; };
@@ -54,6 +86,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				E1E260C850014D6B34B487B0 /* Pods_HafaUp.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0D3B5000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -99,8 +138,20 @@
 				30FCACC6A7BF53CD6D9CF6C0 /* Pods */,
 				90E46E861CB86F5FAF46BED9 /* Frameworks */,
 				59333BAA25CFF706003392A4 /* HafaUp.app */,
+				C0D3B1000000000000000001 /* HafaUpWidget.appex */,
+				C0D3B2000000000000000001 /* HafaUpWidget */,
 			);
 			sourceTree = "<group>";
+		};
+		C0D3B2000000000000000001 /* HafaUpWidget */ = {
+			isa = PBXGroup;
+			children = (
+				C0D3B3000000000000000001 /* HafaUpWidgetBundle.swift */,
+				C0D3B3000000000000000002 /* ShipmentLiveActivity.swift */,
+				C0D3B3000000000000000003 /* Info.plist */,
+			);
+			path = HafaUpWidget;
+			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
@@ -113,16 +164,35 @@
 				CD89F885237E9D9200C436A1 /* Sources */,
 				CD89F886237E9D9200C436A1 /* Frameworks */,
 				CD89F887237E9D9200C436A1 /* Resources */,
+				C0D3B5000000000000000004 /* Embed App Extensions */,
 				592CB04773CB45D6CE5DF117 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				C0D3B6000000000000000001 /* PBXTargetDependency */,
 			);
 			name = "HafaUp";
 			productName = "HafaUp";
 			productReference = 59333BAA25CFF706003392A4 /* HafaUp.app */;
 			productType = "com.apple.product-type.application";
+		};
+		C0D3B0000000000000000001 /* HafaUpWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C0D3B8000000000000000001 /* Build configuration list for PBXNativeTarget "HafaUpWidget" */;
+			buildPhases = (
+				C0D3B5000000000000000001 /* Sources */,
+				C0D3B5000000000000000002 /* Frameworks */,
+				C0D3B5000000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HafaUpWidget;
+			productName = HafaUpWidget;
+			productReference = C0D3B1000000000000000001 /* HafaUpWidget.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -137,6 +207,10 @@
 					CD89F888237E9D9200C436A1 = {
 						CreatedOnToolsVersion = 11.2.1;
 						LastSwiftMigration = 1120;
+					};
+					C0D3B0000000000000000001 = {
+						CreatedOnToolsVersion = 16.4;
+						LastSwiftMigration = 1640;
 					};
 				};
 			};
@@ -154,6 +228,7 @@
 			projectRoot = "";
 			targets = (
 				CD89F888237E9D9200C436A1 /* HafaUp */,
+				C0D3B0000000000000000001 /* HafaUpWidget */,
 			);
 		};
 /* End PBXProject section */
@@ -168,6 +243,13 @@
 				CDC0FE2A2388222C002C8D56 /* LaunchScreen.storyboard in Resources */,
 				595F23A725CEFBFE0053416C /* Assets.xcassets in Resources */,
 				25D3517F267A48E0002E5DC0 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C0D3B5000000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -233,7 +315,25 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C0D3B5000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0D3B4000000000000000001 /* HafaUpWidgetBundle.swift in Sources */,
+				C0D3B4000000000000000002 /* ShipmentLiveActivity.swift in Sources */,
+				C0D3B4000000000000000003 /* ShipmentAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C0D3B6000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C0D3B0000000000000000001 /* HafaUpWidget */;
+			targetProxy = C0D3B7000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		CDC0FE252388222B002C8D56 /* Main.storyboard */ = {
@@ -428,6 +528,70 @@
 			};
 			name = Release;
 		};
+		C0D3B9000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				CONTENTS_FOLDER_PATH = "$(WRAPPER_NAME)";
+				CURRENT_PROJECT_VERSION = 26;
+				DEVELOPMENT_TEAM = GCFCJUMRPV;
+				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
+				FULL_PRODUCT_NAME = "$(WRAPPER_NAME)";
+				INFOPLIST_FILE = "HafaUpWidget/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.app.captainguam.HafaUpWidget";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = XPC!;
+				PRODUCT_NAME = HafaUpWidget;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WRAPPER_EXTENSION = appex;
+				WRAPPER_NAME = "$(PRODUCT_NAME).$(WRAPPER_EXTENSION)";
+			};
+			name = Debug;
+		};
+		C0D3B9000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = NO;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
+				CODE_SIGN_STYLE = Manual;
+				CONTENTS_FOLDER_PATH = "$(WRAPPER_NAME)";
+				CURRENT_PROJECT_VERSION = 26;
+				DEVELOPMENT_TEAM = GCFCJUMRPV;
+				EXECUTABLE_NAME = "$(PRODUCT_NAME)";
+				FULL_PRODUCT_NAME = "$(WRAPPER_NAME)";
+				INFOPLIST_FILE = "HafaUpWidget/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.4;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.app.captainguam.HafaUpWidget";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = XPC!;
+				PRODUCT_NAME = HafaUpWidget;
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Osize";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				WRAPPER_EXTENSION = appex;
+				WRAPPER_NAME = "$(PRODUCT_NAME).$(WRAPPER_EXTENSION)";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -445,6 +609,15 @@
 			buildConfigurations = (
 				CD89F89E237E9D9300C436A1 /* Debug */,
 				CD89F89F237E9D9300C436A1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C0D3B8000000000000000001 /* Build configuration list for PBXNativeTarget "HafaUpWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C0D3B9000000000000000001 /* Debug */,
+				C0D3B9000000000000000002 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

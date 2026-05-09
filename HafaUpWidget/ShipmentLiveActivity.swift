@@ -9,6 +9,7 @@
 //
 
 import ActivityKit
+import Foundation
 import WidgetKit
 import SwiftUI
 
