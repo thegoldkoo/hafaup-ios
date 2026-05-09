@@ -37,56 +37,45 @@ workflows:
           BUNDLE="com.app.captainguam.HafaUpWidget"
           PROFDIR="$HOME/Library/MobileDevice/Provisioning Profiles"
           mkdir -p "$PROFDIR"
+          echo "[fetch-widget] target bundle: $BUNDLE"
 
-          # environment.ios_signing already saved a cert P12 here; reuse it
-          # so fetch-signing-files has a private key (otherwise it errors
-          # "Cannot save Signing Certificates without certificate private key").
-          CERT=$(ls "$HOME/Library/MobileDevice/Certificates"/code_signing_certificate_*.p12 2>/dev/null | head -1 || true)
-          echo "[fetch-widget] using cert P12: ${CERT:-NONE}"
-
-          ATTEMPT_OK=0
-
-          # --- Attempt 1: fetch-signing-files with explicit cert key ---
-          if [ -n "$CERT" ]; then
-            echo "[fetch-widget] attempt 1: fetch-signing-files --certificate-key"
-            if app-store-connect fetch-signing-files \
-                "$BUNDLE" \
-                --type IOS_APP_STORE \
-                --certificate-key="@file:$CERT" \
-                --certificate-key-password="${CM_CERTIFICATE_PASSWORD:-}" \
-                --create 2>&1; then
-              ATTEMPT_OK=1
-              echo "[fetch-widget] attempt 1 ok"
-            else
-              echo "[fetch-widget] attempt 1 failed"
-            fi
+          # Path: download the existing profile via App Store Connect API.
+          # No cert/key handling — we fetch only the .mobileprovision bytes.
+          # Output is redirected to a tmp file so nothing sensitive ever
+          # touches stdout.
+          if app-store-connect profiles list --json > /tmp/all-profiles.json 2>/tmp/profiles-list.err; then
+            echo "[fetch-widget] profiles list ok ($(wc -c < /tmp/all-profiles.json) bytes)"
+          else
+            echo "[fetch-widget] profiles list failed:"
+            head -20 /tmp/profiles-list.err || true
+            exit 1
           fi
 
-          # --- Attempt 2: list-and-save profiles directly via API ---
-          if [ "$ATTEMPT_OK" -eq 0 ]; then
-            echo "[fetch-widget] attempt 2: profiles list via API + manual save"
-            app-store-connect profiles list --json > /tmp/all-profiles.json 2>&1 || {
-              echo "[fetch-widget] profiles list failed"
-              cat /tmp/all-profiles.json | head -20
-            }
-            python3 <<'PYEOF'
+          python3 <<'PYEOF'
           import json, sys, os, base64
           with open('/tmp/all-profiles.json') as f:
               data = json.load(f)
+          # data may be a list of dicts directly
           target_bundle = "com.app.captainguam.HafaUpWidget"
           target_type = "IOS_APP_STORE"
+          # First try strict match by name "HafaUp Widget AppStore"
           chosen = None
           for p in data:
               attrs = p.get('attributes', {})
-              if attrs.get('profileType') == target_type and 'Widget' in attrs.get('name',''):
-                  chosen = p
-                  break
-          if not chosen:
-              print(f"[fetch-widget] no IOS_APP_STORE profile with 'Widget' in name found")
+              if attrs.get('profileType') == target_type and attrs.get('name') == "HafaUp Widget AppStore":
+                  chosen = p; break
+          if chosen is None:
+              # Fall back to any profile with 'Widget' in the name
               for p in data:
                   attrs = p.get('attributes', {})
-                  print(f"  candidate: name={attrs.get('name')!r} type={attrs.get('profileType')}")
-              sys.exit(0)
+                  if attrs.get('profileType') == target_type and 'Widget' in (attrs.get('name') or ''):
+                      chosen = p; break
+          if chosen is None:
+              print("[fetch-widget] no widget profile found; candidates:")
+              for p in data:
+                  attrs = p.get('attributes', {})
+                  print(f"  name={attrs.get('name')!r} type={attrs.get('profileType')}")
+              sys.exit(1)
           name = chosen['attributes']['name']
           uuid = chosen['attributes']['uuid']
           content_b64 = chosen['attributes']['profileContent']
@@ -94,21 +83,17 @@ workflows:
           out_path = os.path.expanduser(f"~/Library/MobileDevice/Provisioning Profiles/{uuid}.mobileprovision")
           with open(out_path, 'wb') as f:
               f.write(content)
-          print(f"[fetch-widget] saved {name!r} (uuid={uuid}) to {out_path}")
+          print(f"[fetch-widget] saved {name!r} (uuid={uuid}) -> {out_path} ({len(content)} bytes)")
           PYEOF
-          fi
 
-          echo "[fetch-widget] === final profile dir contents ==="
+          echo "[fetch-widget] === final profile dir ==="
           ls -la "$PROFDIR"
-
-          # Re-import certs (idempotent) so use-profiles can match cert+profile
-          keychain add-certificates || true
       - name: Setup signing
         script: |
           set -euo pipefail
-          # Codemagic's environment.ios_signing step already fetches uploaded
-          # certificates/profiles into the build VM. Creating signing files here
-          # requires a certificate private key and can fail before archive.
+          # environment.ios_signing already imported the cert; widget profile
+          # is now in the standard Provisioning Profiles dir thanks to the
+          # previous step. xcode-project use-profiles assigns them all.
           xcode-project use-profiles --project HafaUp.xcodeproj
       - name: Apply widget signing (belt-and-suspenders)
         script: |
