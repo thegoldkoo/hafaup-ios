@@ -34,15 +34,9 @@ workflows:
       - name: Setup signing
         script: |
           set -euo pipefail
-          keychain initialize
-          # Fetch profiles for BOTH bundle ids (app + widget extension)
-          app-store-connect fetch-signing-files com.app.captainguam \
-            --type IOS_APP_STORE \
-            --create
-          app-store-connect fetch-signing-files com.app.captainguam.HafaUpWidget \
-            --type IOS_APP_STORE \
-            --create
-          keychain add-certificates
+          # Codemagic's environment.ios_signing step already fetches uploaded
+          # certificates/profiles into the build VM. Creating signing files here
+          # requires a certificate private key and can fail before archive.
           xcode-project use-profiles --project HafaUp.xcodeproj
       - name: Apply widget signing (belt-and-suspenders)
         script: |
