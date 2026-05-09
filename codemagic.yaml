@@ -33,21 +33,76 @@ workflows:
           ruby scripts/bump-build-number.rb
       - name: Fetch widget provisioning profile
         script: |
-          set -euo pipefail
-          # environment.ios_signing only fetches the main app profile (com.app.captainguam).
-          # The widget extension needs its OWN profile (com.app.captainguam.HafaUpWidget).
-          # The App ID is already registered in Apple Developer Console with a
-          # manually-created App Store provisioning profile; --create acts as a
-          # safety fallback if for some reason the profile isn't found.
-          echo "[fetch-widget] fetching profile for com.app.captainguam.HafaUpWidget"
-          app-store-connect fetch-signing-files \
-            "com.app.captainguam.HafaUpWidget" \
-            --type IOS_APP_STORE \
-            --create
-          echo "[fetch-widget] profiles in MobileDevice dir:"
-          ls -la "$HOME/Library/MobileDevice/Provisioning Profiles/" || true
+          set -eu
+          BUNDLE="com.app.captainguam.HafaUpWidget"
+          PROFDIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$PROFDIR"
+
+          # environment.ios_signing already saved a cert P12 here; reuse it
+          # so fetch-signing-files has a private key (otherwise it errors
+          # "Cannot save Signing Certificates without certificate private key").
+          CERT=$(ls "$HOME/Library/MobileDevice/Certificates"/code_signing_certificate_*.p12 2>/dev/null | head -1 || true)
+          echo "[fetch-widget] using cert P12: ${CERT:-NONE}"
+
+          ATTEMPT_OK=0
+
+          # --- Attempt 1: fetch-signing-files with explicit cert key ---
+          if [ -n "$CERT" ]; then
+            echo "[fetch-widget] attempt 1: fetch-signing-files --certificate-key"
+            if app-store-connect fetch-signing-files \
+                "$BUNDLE" \
+                --type IOS_APP_STORE \
+                --certificate-key="@file:$CERT" \
+                --certificate-key-password="${CM_CERTIFICATE_PASSWORD:-}" \
+                --create 2>&1; then
+              ATTEMPT_OK=1
+              echo "[fetch-widget] attempt 1 ok"
+            else
+              echo "[fetch-widget] attempt 1 failed"
+            fi
+          fi
+
+          # --- Attempt 2: list-and-save profiles directly via API ---
+          if [ "$ATTEMPT_OK" -eq 0 ]; then
+            echo "[fetch-widget] attempt 2: profiles list via API + manual save"
+            app-store-connect profiles list --json > /tmp/all-profiles.json 2>&1 || {
+              echo "[fetch-widget] profiles list failed"
+              cat /tmp/all-profiles.json | head -20
+            }
+            python3 <<'PYEOF'
+          import json, sys, os, base64
+          with open('/tmp/all-profiles.json') as f:
+              data = json.load(f)
+          target_bundle = "com.app.captainguam.HafaUpWidget"
+          target_type = "IOS_APP_STORE"
+          chosen = None
+          for p in data:
+              attrs = p.get('attributes', {})
+              if attrs.get('profileType') == target_type and 'Widget' in attrs.get('name',''):
+                  chosen = p
+                  break
+          if not chosen:
+              print(f"[fetch-widget] no IOS_APP_STORE profile with 'Widget' in name found")
+              for p in data:
+                  attrs = p.get('attributes', {})
+                  print(f"  candidate: name={attrs.get('name')!r} type={attrs.get('profileType')}")
+              sys.exit(0)
+          name = chosen['attributes']['name']
+          uuid = chosen['attributes']['uuid']
+          content_b64 = chosen['attributes']['profileContent']
+          content = base64.b64decode(content_b64)
+          out_path = os.path.expanduser(f"~/Library/MobileDevice/Provisioning Profiles/{uuid}.mobileprovision")
+          with open(out_path, 'wb') as f:
+              f.write(content)
+          print(f"[fetch-widget] saved {name!r} (uuid={uuid}) to {out_path}")
+          PYEOF
+          fi
+
+          echo "[fetch-widget] === final profile dir contents ==="
+          ls -la "$PROFDIR"
+
           # Re-import certs (idempotent) so use-profiles can match cert+profile
-          keychain add-certificates
+          keychain add-certificates || true
       - name: Setup signing
         script: |
           set -euo pipefail
