@@ -45,8 +45,8 @@
 			<string>google</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<!-- TODO: GoogleService-Info.plist의 REVERSED_CLIENT_ID 값을 여기 넣기 (Firebase Console → 프로젝트 설정 → iOS app → OAuth client 추가 후 plist 재다운로드) -->
-				<string>com.googleusercontent.apps.PLACEHOLDER</string>
+				<!-- Google Sign-In REVERSED_CLIENT_ID -->
+				<string>com.googleusercontent.apps.324013354606-8c1k88tgkd2etoaoflukupcdu6h7afc9</string>
 			</array>
 		</dict>
 	</array>
