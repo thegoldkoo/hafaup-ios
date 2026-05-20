@@ -8,6 +8,13 @@ target 'HafaUp' do
   # Add the pod for Firebase Cloud Messaging
   pod 'Firebase/Messaging'
 
+  # Native OAuth providers
+  pod 'KakaoSDKAuth'
+  pod 'KakaoSDKUser'
+  pod 'KakaoSDKCommon'
+  pod 'GoogleSignIn'
+  # Sign in with Apple은 AuthenticationServices framework (Apple 내장, pod 불필요)
+
 end
 
 post_install do |installer|

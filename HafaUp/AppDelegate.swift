@@ -1,6 +1,9 @@
 import UIKit
 import FirebaseCore
 import FirebaseMessaging
+import KakaoSDKCommon
+import KakaoSDKAuth
+import GoogleSignIn
  
 @UIApplicationMain
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -13,6 +16,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         FirebaseApp.configure()
         Messaging.messaging().delegate = self
         UNUserNotificationCenter.current().delegate = self
+
+        // Kakao SDK init (native app key)
+        KakaoSDK.initSDK(appKey: "471ca40bfe424cddd367217cc74b855c")
+
+        // Google Sign-In configure — GoogleService-Info.plist의 CLIENT_ID 사용
+        if let path = Bundle.main.path(forResource: "GoogleService-Info", ofType: "plist"),
+           let dict = NSDictionary(contentsOfFile: path),
+           let clientId = dict["CLIENT_ID"] as? String {
+            GIDSignIn.sharedInstance.configuration = GIDConfiguration(clientID: clientId)
+        }
  
         // ✅ 알림 권한 요청
         UNUserNotificationCenter.current().requestAuthorization(
@@ -87,6 +100,19 @@ extension AppDelegate : UNUserNotificationCenterDelegate {
     }
 }
  
+// MARK: - URL handler for native OAuth callbacks (Kakao + Google)
+extension AppDelegate {
+    func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
+        if AuthApi.isKakaoTalkLoginUrl(url) {
+            return AuthController.handleOpenUrl(url: url)
+        }
+        if GIDSignIn.sharedInstance.handle(url) {
+            return true
+        }
+        return false
+    }
+}
+
 extension AppDelegate : MessagingDelegate {
     func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
         print("🔥 Firebase registration token: \(String(describing: fcmToken))")

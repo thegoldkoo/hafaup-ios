@@ -263,5 +263,14 @@ extension ViewController: WKScriptMessageHandler {
         if message.name == "push-token" {
             handleFCMToken()
         }
+        if message.name == "native-login-kakao" {
+            handleKakaoLogin()
+        }
+        if message.name == "native-login-google" {
+            handleGoogleLogin()
+        }
+        if message.name == "native-login-apple" {
+            handleAppleLogin()
+        }
   }
 }

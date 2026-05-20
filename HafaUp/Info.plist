@@ -32,9 +32,22 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string></string>
+			<string>kakao</string>
 			<key>CFBundleURLSchemes</key>
-			<array />
+			<array>
+				<string>kakao471ca40bfe424cddd367217cc74b855c</string>
+			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>google</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<!-- TODO: GoogleService-Info.plist의 REVERSED_CLIENT_ID 값을 여기 넣기 (Firebase Console → 프로젝트 설정 → iOS app → OAuth client 추가 후 plist 재다운로드) -->
+				<string>com.googleusercontent.apps.PLACEHOLDER</string>
+			</array>
 		</dict>
 	</array>
 	<key>CFBundleVersion</key>
