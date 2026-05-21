@@ -10,17 +10,17 @@ import GoogleSignIn
 fileprivate let HAFAUP_API_URL = "https://xct6si3lv4d5wq7c33e2ia5dle0vkvug.lambda-url.ap-southeast-2.on.aws/"
 
 // JS bridge — WebView에 native-auth-result 이벤트 전달
-func sendAuthResultToWebView(provider: String, success: Bool, token: String?, error: String?) {
+func sendAuthResultToWebView(provider: String, success: Bool, token: String?, error: String?, user: [String: Any]? = nil) {
     DispatchQueue.main.async {
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "provider": provider,
             "success": success,
             "token": token ?? "",
             "error": error ?? ""
         ]
+        if let user = user { payload["user"] = user }
         guard let data = try? JSONSerialization.data(withJSONObject: payload),
               let json = String(data: data, encoding: .utf8) else { return }
-        let escaped = json.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "'", with: "\\'")
         let js = "window.dispatchEvent(new CustomEvent('native-auth-result', { detail: \(json) }));"
         HafaUp.webView.evaluateJavaScript(js, completionHandler: nil)
     }
@@ -49,7 +49,8 @@ func exchangeTokenForJWT(action: String, params: [String: Any], provider: String
             return
         }
         if let token = json["token"] as? String, !token.isEmpty {
-            sendAuthResultToWebView(provider: provider, success: true, token: token, error: nil)
+            let userDict = json["user"] as? [String: Any]
+            sendAuthResultToWebView(provider: provider, success: true, token: token, error: nil, user: userDict)
         } else {
             let errStr = (json["error"] as? String) ?? "unknown backend error"
             sendAuthResultToWebView(provider: provider, success: false, token: nil, error: errStr)
