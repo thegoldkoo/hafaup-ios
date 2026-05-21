@@ -1,4 +1,6 @@
 import UIKit
+import KakaoSDKAuth
+import GoogleSignIn
 
 @available(iOS 13.0, *)
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -28,6 +30,18 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
     
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
+        if let url = URLContexts.first?.url {
+            print("🔗 SceneDelegate openURL: \(url.absoluteString)")
+            // Kakao OAuth callback (kakaotalk:// or kakao{NATIVE_APP_KEY}://)
+            if AuthApi.isKakaoTalkLoginUrl(url) {
+                _ = AuthController.handleOpenUrl(url: url)
+                return
+            }
+            // Google Sign-In callback (com.googleusercontent.apps.{CLIENT_ID}://)
+            if GIDSignIn.sharedInstance.handle(url) {
+                return
+            }
+        }
     }
 
     func scene(_ scene: UIScene, continue userActivity: NSUserActivity) {
