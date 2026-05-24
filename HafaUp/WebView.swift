@@ -176,16 +176,9 @@ extension ViewController: WKUIDelegate, WKDownloadDelegate {
                     }
                     return
                 }
-                if (navigationAction.navigationType == .other &&
-                    navigationAction.value(forKey: "syntheticClickType") as! Int == 0 &&
-                    (navigationAction.targetFrame != nil)
-                ) {
-                    decisionHandler(.allow)
-                    return
-                }
-                else {
-                    decisionHandler(.cancel)
-                }
+                // External payment/auth pages must not be loaded inside the app-bound WKWebView.
+                // Loading Stripe Checkout here can fail or fall back to the app home. Open it in Safari instead.
+                decisionHandler(.cancel)
 
 
                 if ["http", "https"].contains(requestUrl.scheme?.lowercased() ?? "") {
